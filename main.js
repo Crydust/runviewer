@@ -1,58 +1,157 @@
 /*jslint nomen: true, plusplus: true, vars: true */
-/*global XMLHttpRequest:false, DOMParser:false, google:false, _:false, window:false, document:false */
+/*global google:false, _:false, window:false, document:false */
 
-(function (XMLHttpRequest, DOMParser, google, _, window, document) {
+// IE 6: map doesn't show, works in IE 7
 
-    "use strict";
+(function (XMLHttpRequest, DOMParser, ActiveXObject, google, _, window, document) {
+
+    'use strict';
+
+    var NOOP = function () {};
+
+    /**
+     * worst Promise implementation ever
+     */
+    function Promise() {
+        this._rc = NOOP;
+        this._ec = NOOP;
+    }
+    Promise.prototype.resolve = function (value) {
+        this._rc.call(this, value);
+    };
+    Promise.prototype.reject = function (error) {
+        this._ec.call(this, error);
+    };
+    Promise.prototype.then = function (resolvedCallback, errorCallback) {
+        this._rc = resolvedCallback || NOOP;
+        this._ec = errorCallback || NOOP;
+    };
+
+    function fetchTextAsync(url) {
+        var promise = new Promise();
+        var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('MSXML2.XMLHTTP.3.0');
+        if (xhr.overrideMimeType) {
+            xhr.overrideMimeType('text/plain; charset=UTF-8');
+        }
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    promise.resolve(xhr.responseText);
+                } else {
+                    promise.reject(null);
+                }
+            }
+        };
+        xhr.open('GET', url, true);
+        xhr.send(null);
+        return promise;
+    }
 
     function loadXml(url) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url, false);
-        //xhr.overrideMimeType('text/xml; charset=UTF-8');
-        xhr.send(null);
-        var xml = null;
-        if (xml === null) {
-            var responseText = xhr.responseText;
-
+        var promise = new Promise();
+        fetchTextAsync(url).then(function (responseText) {
             // xml is invalid sometimes
             if (responseText.indexOf('</trkseg>') === -1) {
                 responseText = responseText.replace('</trk>', '</trkseg></trk>');
             }
-
-            xml = (new DOMParser()).parseFromString(responseText, 'text/xml');
-        }
-        return xml;
+            var xml;
+            if (DOMParser) {
+                xml = (new DOMParser()).parseFromString(responseText, 'text/xml');
+            } else {
+                xml = new ActiveXObject('Microsoft.XMLDOM');
+                xml.async = false;
+                xml.loadXML(responseText);
+            }
+            promise.resolve(xml);
+        });
+        return promise;
     }
 
-    function ms_to_kmh(ms) {
+    /**
+     * @param {number} degrees
+     * @return {number} radians
+     */
+    function toRad(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
+    /**
+     * Returns the distance between two points in m
+     * (using Haversine formula)
+     *
+     * from: Haversine formula - R. W. Sinnott, "Virtues of the Haversine",
+     *       Sky and Telescope, vol 68, no 2, 1984
+     * 
+     * @param {LatLng} from
+     * @param {LatLng} to
+     * @param {number=} radius
+     * @return {number} distance in meters
+     */
+    function computeDistanceBetween(from, to) {
+        // earth radius as used in gps systems (WGS-84)
+        var radius = 6378137;
+
+        var lat1 = toRad(from.lat());
+        var lon1 = toRad(from.lng());
+        var lat2 = toRad(to.lat());
+        var lon2 = toRad(to.lng());
+
+        var dLat = lat2 - lat1;
+        var dLon = lon2 - lon1;
+
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        var d = radius * c;
+
+        return d;
+    }
+
+    function msToKmh(ms) {
         return ms * 3.6;
     }
 
-    function kmh_to_ms(kmh) {
+    function kmhToMs(kmh) {
         return kmh / 3.6;
     }
-    
+
     function padLeft(s, length, chr) {
-	    var result = String(s);
-	    while (result.length < length) {
-        	result = chr + result;
+        var result = String(s);
+        while (result.length < length) {
+            result = chr + result;
         }
         return String(result);
     }
-    
-    function seconds_to_legible(s) {
+
+    function secondsToLegible(s) {
         var hours = Math.floor(s / 3600);
         var minutes = Math.floor((s - hours * 3600) / 60);
         var seconds = Math.floor((s - hours * 3600 - minutes * 60));
         var result = '%dm %ds';
         if (hours > 0) {
-	        result = '%dh %dm %ds';
-	        result = result.replace('%d', padLeft(hours, 2, '0'))
+            result = '%dh %dm %ds';
+            result = result.replace('%d', padLeft(hours, 2, '0'));
         }
         return result
             .replace('%d', padLeft(minutes, 2, '0'))
             .replace('%d', padLeft(seconds, 2, '0'));
     }
+
+    function stringToEpoch(str) {
+        // 2012-07-09T19:04:03Z
+        var parts = str.split(/[\-T:Z]/g);
+        var date = new Date();
+        date.setUTCFullYear(parseInt(parts[0], 10));
+        date.setUTCMonth(parseInt(parts[1], 10) - 1);
+        date.setUTCDate(parseInt(parts[2], 10));
+        date.setUTCHours(parseInt(parts[3], 10));
+        date.setUTCMinutes(parseInt(parts[4], 10));
+        date.setUTCSeconds(parseInt(parts[5], 10));
+        date.setUTCMilliseconds(0);
+        return date.getTime() / 1000;
+    }
+
     function epochToDateString(epoch_s) {
         var date = new Date();
         date.setTime(epoch_s * 1000);
@@ -73,8 +172,8 @@
         return Math.floor(Math.random() * (to - from + 1) + from);
     }
 
-    function speed_to_color(speed) {
-        var kmh = ms_to_kmh(speed);
+    function speedToColor(speed) {
+        var kmh = msToKmh(speed);
 
         if (kmh < 7) {
             return '#B22424';
@@ -109,10 +208,13 @@
         return new google.maps.LatLng(this._lat, this._lng);
     };
     TrackPoint.createFromNode = function (node) {
+        // IE 8 doesn't understand the '-', 'Z' and has no textContent support
+        var timeNode = node.getElementsByTagName('time')[0];
+        var timeText = timeNode.textContent || timeNode.text;
         return new TrackPoint(
             parseFloat(node.attributes.getNamedItem('lat').nodeValue),
             parseFloat(node.attributes.getNamedItem('lon').nodeValue),
-            Date.parse(node.getElementsByTagName('time')[0].textContent) / 1000
+            stringToEpoch(timeText)
         );
     };
 
@@ -136,10 +238,10 @@
             var previousPoint = this._points[this._points.length - 1];
             var previousDistance = this._distances[this._distances.length - 1];
             var previousTime = this._times[this._times.length - 1];
-            var positionDiff = google.maps.geometry.spherical.computeDistanceBetween(previousPoint.getLatLng(), point.getLatLng());
+            var positionDiff = computeDistanceBetween(previousPoint.getLatLng(), point.getLatLng());
             var timeDiff = point.getTime() - previousPoint.getTime();
             var speed = positionDiff / timeDiff;
-            if (isFinite(speed) && !isNaN(speed) && speed > kmh_to_ms(0.01)  && speed < kmh_to_ms(50)) {
+            if (isFinite(speed) && !isNaN(speed) && speed > kmhToMs(0.01)  && speed < kmhToMs(50)) {
                 this._points.push(point);
                 this._speeds.push(speed);
                 this._distances.push(previousDistance + positionDiff);
@@ -164,7 +266,7 @@
     Track.prototype.getAveragePace = function () {
         var kilometers = this.getTotalDistance() / 1000;
         var seconds_per_kilometer = this.getTotalTime() / kilometers;
-        return seconds_to_legible(seconds_per_kilometer);
+        return secondsToLegible(seconds_per_kilometer);
     };
     Track.prototype.getTotalDistance = function () {
         return this._distances[this._distances.length - 1];
@@ -182,19 +284,24 @@
         return epochToTimeString(this._points[this._points.length - 1].getTime());
     };
     Track.loadFromXml = function (url) {
-        var track = new Track();
-        var xml = loadXml(url);
-        return;
-        //console.log('xml', xml);
-        var trkptNodes = xml.getElementsByTagNameNS('http://www.topografix.com/GPX/1/1', 'trkpt');
-        var i, len;
-        //var trkptNodes = xml.getElementsByTagNameNS('trkpt');
-        //console.log('trkptNodes', trkptNodes);
-        track.addPoint(TrackPoint.createFromNode(trkptNodes[0]));
-        for (i = 0, len = trkptNodes.length; i < len; i++) {
-            track.addPoint(TrackPoint.createFromNode(trkptNodes[i]));
-        }
-        return track;
+        var promise = new Promise();
+        loadXml(url).then(function (xml) {
+            var track = new Track();
+            var trkptNodes;
+            if (xml.getElementsByTagNameNS) {
+                trkptNodes = xml.getElementsByTagNameNS('http://www.topografix.com/GPX/1/1', 'trkpt');
+            } else {
+                //IE 8 doesn't support getElementsByTagNameNS
+                trkptNodes = xml.getElementsByTagName('trkpt');
+            }
+            var i, len;
+            track.addPoint(TrackPoint.createFromNode(trkptNodes[0]));
+            for (i = 0, len = trkptNodes.length; i < len; i++) {
+                track.addPoint(TrackPoint.createFromNode(trkptNodes[i]));
+            }
+            promise.resolve(track);
+        });
+        return promise;
     };
 
     function initialize() {
@@ -207,119 +314,101 @@
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
-        //console.log(url);
 
-        var track = Track.loadFromXml(url);
-        var center = track.getCenter();
+        Track.loadFromXml(url).then(function (track) {
 
-        document.getElementById('date').innerHTML = track.getDate();
-        document.getElementById('starttime').innerHTML = track.getStartTime();
-        document.getElementById('endtime').innerHTML = track.getEndTime();
-        document.getElementById('distance').innerHTML = (track.getTotalDistance() / 1000).toFixed(2) + ' km';
-        document.getElementById('duration').innerHTML = seconds_to_legible(track.getTotalTime());
-        document.getElementById('avgpace').innerHTML = track.getAveragePace() + ' /km';
-        document.getElementById('avgspeed').innerHTML = ms_to_kmh(track.getAverageSpeed()).toFixed(2) + ' km/h';
+            document.getElementById('date').innerHTML = track.getDate();
+            document.getElementById('starttime').innerHTML = track.getStartTime();
+            document.getElementById('endtime').innerHTML = track.getEndTime();
+            document.getElementById('distance').innerHTML = (track.getTotalDistance() / 1000).toFixed(2) + ' km';
+            document.getElementById('duration').innerHTML = secondsToLegible(track.getTotalTime());
+            document.getElementById('avgpace').innerHTML = track.getAveragePace() + ' /km';
+            document.getElementById('avgspeed').innerHTML = msToKmh(track.getAverageSpeed()).toFixed(2) + ' km/h';
 
-        // http://gmaps-samples-v3.googlecode.com/svn/trunk/styledmaps/wizard/index.html
-        var myOptions = {
-                zoom: 15,
-                center: center,
-                mapTypeId: google.maps.MapTypeId.ROADMAP,
-                //disableDefaultUI: true,
-                styles: [{
-						featureType: "poi",
-						stylers: [
-							{ visibility: "off" }
-						]
-					},{
-						featureType: "administrative",
-						stylers: [
-							{ visibility: "off" }
-						]
-					},{
-						featureType: "landscape",
-						stylers: [
-							{ visibility: "off" }
-						]
-					},{
-						featureType: "transit",
-						stylers: [
-							{ visibility: "off" }
-						]
-					}]
-            };
-        // ROADMAP, TERRAIN
-        var map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+            var center = track.getCenter();
 
-        /*
-        new google.maps.Polyline({
-          path: track.getCoordinates(),
-          strokeColor: "#000000",
-          strokeOpacity: 1.0,
-          strokeWeight: 5
-        }).setMap(map);
-        */
+            // http://gmaps-samples-v3.googlecode.com/svn/trunk/styledmaps/wizard/index.html
+            var myOptions = {
+                    zoom: 15,
+                    center: center,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    //disableDefaultUI: true,
+                    styles: [{
+                        featureType: 'poi',
+                        stylers: [{ visibility: 'off' }]
+                    }, {
+                        featureType: 'administrative',
+                        stylers: [{ visibility: 'off' }]
+                    }, {
+                        featureType: 'landscape',
+                        stylers: [{ visibility: 'off' }]
+                    }, {
+                        featureType: 'transit',
+                        stylers: [{ visibility: 'off' }]
+                    }]
+                };
 
-        var mapReady = false;
-        var rectangle = new google.maps.Rectangle();
-        var polyline;
+            var map = new google.maps.Map(document.getElementById('map_canvas'), myOptions);
 
-        function drawTrack() {
-            var colors = _.map(track.getSpeeds(), speed_to_color);
-            var coordinates = track.getCoordinates();
-            var currentColor = colors[1];
-            var previousPoint = coordinates[0];
+            var mapReady = false;
+            var rectangle = new google.maps.Rectangle();
+            var polyline;
 
-            var currentColorPoints = [];
-            var i, len, currentPoint;
-            currentColorPoints.push(previousPoint);
+            function drawTrack() {
+                var colors = _.map(track.getSpeeds(), speedToColor);
+                var coordinates = track.getCoordinates();
+                var currentColor = colors[1];
+                var previousPoint = coordinates[0];
 
-            rectangle.setOptions({
-                strokeColor: "#000000",
-                strokeOpacity: 0,
-                strokeWeight: 0,
-                fillColor: "#000000",
-                fillOpacity: 0.7,
-                map: map,
-                bounds: map.getBounds()
-            });
+                var currentColorPoints = [];
+                var i, len, currentPoint;
+                currentColorPoints.push(previousPoint);
 
-            for (i = 1, len = colors.length; i < len; i++) {
-                //console.log('i = '+i);
-                currentPoint = coordinates[i];
-                currentColorPoints.push(currentPoint);
-                if (colors[i] !== currentColor || i === len - 1) {
-                    //console.log('currentColor = '+currentColor);
-                    polyline = new google.maps.Polyline({
-                        path: currentColorPoints,
-                        strokeColor: currentColor,
-                        strokeOpacity: 0.9,
-                        strokeWeight: 5,
-                        map: map
-                    });
+                rectangle.setOptions({
+                    strokeColor: '#000000',
+                    strokeOpacity: 0,
+                    strokeWeight: 0,
+                    fillColor: '#000000',
+                    fillOpacity: 0.7,
+                    map: map,
+                    bounds: map.getBounds()
+                });
 
-                    currentColor = colors[i];
-                    currentColorPoints = [];
+                for (i = 1, len = colors.length; i < len; i++) {
+                    currentPoint = coordinates[i];
                     currentColorPoints.push(currentPoint);
+                    if (colors[i] !== currentColor || i === len - 1) {
+                        polyline = new google.maps.Polyline({
+                            path: currentColorPoints,
+                            strokeColor: currentColor,
+                            strokeOpacity: 0.9,
+                            strokeWeight: 5,
+                            map: map
+                        });
+
+                        currentColor = colors[i];
+                        currentColorPoints = [];
+                        currentColorPoints.push(currentPoint);
+                    }
                 }
             }
-        }
 
-        function onBoundsChanged() {
-            if (!mapReady) {
-                drawTrack();
-                mapReady = true;
-            } else {
-                rectangle.setBounds(map.getBounds());
+            function onBoundsChanged() {
+                if (!mapReady) {
+                    drawTrack();
+                    mapReady = true;
+                } else {
+                    rectangle.setBounds(map.getBounds());
+                }
             }
-        }
 
-        google.maps.event.addListener(map, 'bounds_changed', onBoundsChanged);
+            google.maps.event.addListener(map, 'bounds_changed', _.debounce(onBoundsChanged, 50));
 
+        });
 
     }
 
-    window.onload = initialize();
+    window.onload = initialize;
 
-}(XMLHttpRequest, DOMParser, google, _, window, document));
+}(window.XMLHttpRequest, window.DOMParser, window.ActiveXObject, google, _, window, document));
 
