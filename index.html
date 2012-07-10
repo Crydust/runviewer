@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>Crydust - Runkeeper gradient map</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <table id="stats">
+        <tr>
+            <th>Date</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Distance</th>
+            <th>Duration</th>
+            <th>Avg. Pace</th>
+            <th>Avg. Speed</th>
+        </tr>
+        <tr>
+            <td id="date"></td>
+            <td id="starttime"></td>
+            <td id="endtime"></td>
+            <td id="distance"></td>
+            <td id="duration"></td>
+            <td id="avgpace"></td>
+            <td id="avgspeed"></td>
+        </tr>
+    </table>
+    <div id="map_canvas"></div>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false&v=3&libraries=geometry"></script>
+    <script type="text/javascript" src="lodash.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+</body>
+</html>

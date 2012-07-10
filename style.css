@@ -1,0 +1,53 @@
+html, body {
+    height: 100%;
+    margin: 0px;
+    padding: 0px;
+    font-family: Arial, sans-serif;
+    background: #FFF;
+}
+#stats {
+    background: #2B5DAA;
+    color: #FFF;
+    border-collapse: collapse;
+    height: 45px;
+    margin: 0 auto;
+}
+#stats th, #stats td {
+    border-right: 1px solid #FFF;
+    padding: 0 12px;
+    text-align: center;
+}
+#stats th {
+    font-weight: normal;
+    font-size: 12px;
+}
+#stats td {
+    font-weight: bold;
+    font-size: 20px;
+    text-shadow: 2px 2px #000;
+    white-space: nowrap;
+}
+#map_canvas {
+    position: absolute;
+    top: 45px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+@media screen and (max-width: 650px) {
+	#stats {
+		width: 100%;
+	}
+	#stats th, #stats td {
+		padding: 0;
+	}
+	#stats th {
+	    font-size: 9px;
+	}
+	#stats td {
+	    font-size: 9px;
+	    text-shadow: 1px 1px #000;
+	}
+	
+}

@@ -1,0 +1,5 @@
+syntax: regexp
+^vendor/
+syntax: glob
+*.gpx
+*.min.js
