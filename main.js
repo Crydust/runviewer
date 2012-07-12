@@ -289,6 +289,11 @@
     Track.prototype.getEndTime = function () {
         return epochToTimeString(_.last(this._points).getTime());
     };
+    Track.prototype.getLatLngBounds = function () {
+        var latlngbounds = new google.maps.LatLngBounds();
+        _.each(this._points, function (value) { latlngbounds.extend(value.getLatLng()); });
+        return latlngbounds;
+    };
     Track.loadFromXml = function (url) {
         var promise = new Promise();
         loadXml(url).then(function (xml) {
@@ -357,6 +362,13 @@
 
             track = track.toTrackWithWalkingAverage();
 
+            var center = track.getCenter();
+            var colors = _.map(track.getSpeeds(), speedToColor);
+            var coordinates = track.getCoordinates();
+            var distances = track.getDistances();
+            var times = track.getTimes();
+            var latLngBounds = track.getLatLngBounds();
+
             _.each({
                 'date': track.getDate(),
                 'starttime': track.getStartTime(),
@@ -369,15 +381,9 @@
                 document.getElementById(key).innerHTML = value;
             });
 
-            var center = track.getCenter();
-            var colors = _.map(track.getSpeeds(), speedToColor);
-            var coordinates = track.getCoordinates();
-            var distances = track.getDistances();
-            var times = track.getTimes();
-
             // http://gmaps-samples-v3.googlecode.com/svn/trunk/styledmaps/wizard/index.html
-            var myOptions = {
-                    zoom: 15,
+            var map = new google.maps.Map(document.getElementById('map_canvas'), {
+                    zoom: 13,
                     center: center,
                     mapTypeId: google.maps.MapTypeId.ROADMAP,
                     //disableDefaultUI: true,
@@ -394,10 +400,10 @@
                         featureType: 'transit',
                         stylers: [{ visibility: 'off' }]
                     }]
-                };
+                });
 
-            var map = new google.maps.Map(document.getElementById('map_canvas'), myOptions);
-
+            map.fitBounds(latLngBounds);
+            
             var rectangle = new google.maps.Rectangle();
 
             function drawTrack() {
@@ -426,7 +432,7 @@
                             path: currentColorPoints,
                             strokeColor: currentColor,
                             strokeOpacity: 1,
-                            strokeWeight: 4,
+                            strokeWeight: 5,
                             map: map
                         });
 
@@ -460,10 +466,15 @@
                     if (currentKm > km) {
                         km = currentKm;
                         var time = times[index];
+                        
                         var kmIcon = new google.maps.Marker({
                             position: coordinates[index],
                             map: map,
-                            icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=' + km  + '|CCCCCC|000000'}
+                            //icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=' + km  + '|CCCCCC|000000'}
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 3
+                            }
                         });
                         var kmInfoWindow = new google.maps.InfoWindow({
                             content: 'Distance: ' + km + ' km<br />Time: ' + secondsToLegible(time)
