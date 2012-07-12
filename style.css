@@ -17,6 +17,9 @@ html, body {
     padding: 0 12px;
     text-align: center;
 }
+#stats th.last, #stats td.last {
+    border-right: 0px none #FFF;
+}
 #stats th {
     font-weight: normal;
     font-size: 12px;

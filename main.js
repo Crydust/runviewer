@@ -235,13 +235,13 @@
             this._distances.push(0);
             this._times.push(0);
         } else {
-            var previousPoint = this._points[this._points.length - 1];
-            var previousDistance = this._distances[this._distances.length - 1];
-            var previousTime = this._times[this._times.length - 1];
+            var previousPoint = _.last(this._points);
+            var previousDistance = _.last(this._distances);
+            var previousTime = _.last(this._times);
             var positionDiff = computeDistanceBetween(previousPoint.getLatLng(), point.getLatLng());
             var timeDiff = point.getTime() - previousPoint.getTime();
             var speed = positionDiff / timeDiff;
-            if (isFinite(speed) && !isNaN(speed) && speed > kmhToMs(0.01)  && speed < kmhToMs(50)) {
+            if (isFinite(speed) && !isNaN(speed) && speed > kmhToMs(0.01) && speed < kmhToMs(50)) {
                 this._points.push(point);
                 this._speeds.push(speed);
                 this._distances.push(previousDistance + positionDiff);
@@ -254,6 +254,12 @@
     };
     Track.prototype.getSpeeds = function () {
         return this._speeds;
+    };
+    Track.prototype.getDistances = function () {
+        return this._distances;
+    };
+    Track.prototype.getTimes = function () {
+        return this._times;
     };
     Track.prototype.getCenter = function () {
         var centerLat = _.reduce(this._points, function (memo, point) {return memo + point.getLat(); }, 0) / this._points.length;
@@ -269,10 +275,10 @@
         return secondsToLegible(seconds_per_kilometer);
     };
     Track.prototype.getTotalDistance = function () {
-        return this._distances[this._distances.length - 1];
+        return _.last(this._distances);
     };
     Track.prototype.getTotalTime = function () {
-        return this._times[this._times.length - 1];
+        return _.last(this._times);
     };
     Track.prototype.getDate = function () {
         return epochToDateString(this._points[0].getTime());
@@ -281,7 +287,7 @@
         return epochToTimeString(this._points[0].getTime());
     };
     Track.prototype.getEndTime = function () {
-        return epochToTimeString(this._points[this._points.length - 1].getTime());
+        return epochToTimeString(_.last(this._points).getTime());
     };
     Track.loadFromXml = function (url) {
         var promise = new Promise();
@@ -304,28 +310,70 @@
         return promise;
     };
 
+    Track.prototype.toTrackWithWalkingAverage = function (n) {
+        var result = new Track();
+        _.each(_.map(this._points, function (element, index, list) {
+            var els;
+            if (index === 0 || index === list.length - 1) {
+                els = [element];
+            } else if (index <= 2 || index >= list.length - 3) {
+                els = [list[index - 1], element, element, list[index + 1]];
+            } else {
+                els = [
+                    list[index - 3],
+                    list[index - 2], list[index - 2],
+                    list[index - 1], list[index - 1], list[index - 1],
+                    element, element, element, element, element, element,
+                    list[index + 1], list[index + 1], list[index + 1],
+                    list[index + 2], list[index + 2],
+                    list[index + 3]];
+            }
+            var result = new TrackPoint(
+                _.reduce(els, function (memo, el) { return memo + el.getLat(); }, 0) / els.length,
+                _.reduce(els, function (memo, el) { return memo + el.getLng(); }, 0) / els.length,
+                _.reduce(els, function (memo, el) { return memo + el.getTime(); }, 0) / els.length
+            );
+            return result;
+            
+        }), function (element, index, list) {
+            result.addPoint(element);
+        });
+        return result;
+    };
+
     function initialize() {
         var urls = [
                 //'RK_gpx _2012-07-01_2045.gpx',
                 //'RK_gpx _2012-07-06_1254.gpx',
                 //'RK_gpx _2012-07-06_1334.gpx',
                 //'RK_gpx _2012-07-06_2229.gpx',
-                'RK_gpx _2012-07-09_2104.gpx'
+                //'RK_gpx _2012-07-09_2104.gpx',
+                'RK_gpx _2012-07-11_2122.gpx'
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
 
         Track.loadFromXml(url).then(function (track) {
 
-            document.getElementById('date').innerHTML = track.getDate();
-            document.getElementById('starttime').innerHTML = track.getStartTime();
-            document.getElementById('endtime').innerHTML = track.getEndTime();
-            document.getElementById('distance').innerHTML = (track.getTotalDistance() / 1000).toFixed(2) + ' km';
-            document.getElementById('duration').innerHTML = secondsToLegible(track.getTotalTime());
-            document.getElementById('avgpace').innerHTML = track.getAveragePace() + ' /km';
-            document.getElementById('avgspeed').innerHTML = msToKmh(track.getAverageSpeed()).toFixed(2) + ' km/h';
+            track = track.toTrackWithWalkingAverage();
+
+            _.each({
+                'date': track.getDate(),
+                'starttime': track.getStartTime(),
+                'endtime': track.getEndTime(),
+                'distance': (track.getTotalDistance() / 1000).toFixed(2) + ' km',
+                'duration': secondsToLegible(track.getTotalTime()),
+                'avgpace': track.getAveragePace() + ' /km',
+                'avgspeed': msToKmh(track.getAverageSpeed()).toFixed(2) + ' km/h'
+            }, function (value, key, list) {
+                document.getElementById(key).innerHTML = value;
+            });
 
             var center = track.getCenter();
+            var colors = _.map(track.getSpeeds(), speedToColor);
+            var coordinates = track.getCoordinates();
+            var distances = track.getDistances();
+            var times = track.getTimes();
 
             // http://gmaps-samples-v3.googlecode.com/svn/trunk/styledmaps/wizard/index.html
             var myOptions = {
@@ -350,13 +398,9 @@
 
             var map = new google.maps.Map(document.getElementById('map_canvas'), myOptions);
 
-            var mapReady = false;
             var rectangle = new google.maps.Rectangle();
-            var polyline;
 
             function drawTrack() {
-                var colors = _.map(track.getSpeeds(), speedToColor);
-                var coordinates = track.getCoordinates();
                 var currentColor = colors[1];
                 var previousPoint = coordinates[0];
 
@@ -378,11 +422,11 @@
                     currentPoint = coordinates[i];
                     currentColorPoints.push(currentPoint);
                     if (colors[i] !== currentColor || i === len - 1) {
-                        polyline = new google.maps.Polyline({
+                        var polyline = new google.maps.Polyline({
                             path: currentColorPoints,
                             strokeColor: currentColor,
-                            strokeOpacity: 0.9,
-                            strokeWeight: 5,
+                            strokeOpacity: 1,
+                            strokeWeight: 4,
                             map: map
                         });
 
@@ -393,16 +437,51 @@
                 }
             }
 
-            function onBoundsChanged() {
-                if (!mapReady) {
-                    drawTrack();
-                    mapReady = true;
-                } else {
-                    rectangle.setBounds(map.getBounds());
-                }
+            function drawMarkers() {
+                var km = 0;
+                var startIcon = new google.maps.Marker({
+                    position: coordinates[0],
+                    map: map,
+                    icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=A|69C24C|000000'}
+                });
+                var endIcon = new google.maps.Marker({
+                    position: _.last(coordinates),
+                    map: map,
+                    icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=B|69C24C|000000'}
+                });
+                var endInfoWindow = new google.maps.InfoWindow({
+                    content: 'Distance: ' + (_.last(distances) / 1000).toFixed(2) + ' km<br />Time: ' + secondsToLegible(_.last(times))
+                });
+                google.maps.event.addListener(endIcon, 'click', function () {
+                    endInfoWindow.open(map, this);
+                });
+                _.each(distances, function (element, index, list) {
+                    var currentKm = Math.floor(element / 1000);
+                    if (currentKm > km) {
+                        km = currentKm;
+                        var time = times[index];
+                        var kmIcon = new google.maps.Marker({
+                            position: coordinates[index],
+                            map: map,
+                            icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=' + km  + '|CCCCCC|000000'}
+                        });
+                        var kmInfoWindow = new google.maps.InfoWindow({
+                            content: 'Distance: ' + km + ' km<br />Time: ' + secondsToLegible(time)
+                        });
+                        google.maps.event.addListener(kmIcon, 'click', function () {
+                            kmInfoWindow.open(map, this);
+                        });
+                    }
+                });
             }
 
-            google.maps.event.addListener(map, 'bounds_changed', _.debounce(onBoundsChanged, 50));
+            function updateRectangleBounds() {
+                rectangle.setBounds(map.getBounds());
+            }
+
+            google.maps.event.addListenerOnce(map, 'idle', drawTrack);
+            google.maps.event.addListenerOnce(map, 'idle', drawMarkers);
+            google.maps.event.addListener(map, 'bounds_changed', _.debounce(updateRectangleBounds, 50));
 
         });
 

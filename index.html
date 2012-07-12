@@ -15,7 +15,7 @@
             <th>Distance</th>
             <th>Duration</th>
             <th>Avg. Pace</th>
-            <th>Avg. Speed</th>
+            <th class="last">Avg. Speed</th>
         </tr>
         <tr>
             <td id="date"></td>
@@ -24,12 +24,27 @@
             <td id="distance"></td>
             <td id="duration"></td>
             <td id="avgpace"></td>
-            <td id="avgspeed"></td>
+            <td id="avgspeed" class="last"></td>
         </tr>
     </table>
     <div id="map_canvas"></div>
-    <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?sensor=false&amp;v=3"></script>
-    <script type="text/javascript" src="lodash.min.js"></script>
-    <script type="text/javascript" src="main.min.js"></script>
+    <script src="http://maps.googleapis.com/maps/api/js?sensor=false&amp;v=3"></script>
+    <script src="lodash.min.js"></script>
+    <script src="main.min.js"></script>
+    <script>
+    /*jslint sloppy:  true, nomen: true, vars: true */
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-20239111-1']);
+    _gaq.push(['_setDomainName', 'crydust.be']);
+    _gaq.push(['_trackPageview']);
+    (function () {
+        var ga = document.createElement('script');
+        ga.type = 'text/javascript';
+        ga.async = true;
+        ga.src = ('https:' === document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0];
+        s.parentNode.insertBefore(ga, s);
+    }());
+    </script>
 </body>
 </html>
