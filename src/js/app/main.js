@@ -1,9 +1,9 @@
 /*jslint nomen: true, plusplus: true, vars: true */
-/*global google:false, _:false, window:false, document:false */
+/*global define: false, window:false, XMLHttpRequest: false, ActiveXObject: false, DOMParser: false */
 
 // IE 6: map doesn't show, works in IE 7
 
-(function (XMLHttpRequest, DOMParser, ActiveXObject, google, _, window, document) {
+define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga) {
 
     'use strict';
 
@@ -498,7 +498,7 @@
 
     }
 
-    window.onload = initialize;
-
-}(window.XMLHttpRequest, window.DOMParser, window.ActiveXObject, google, _, window, document));
-
+    initialize();
+    
+    return {};
+});

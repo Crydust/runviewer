@@ -1,5 +1,60 @@
-syntax: regexp
-^vendor/
 syntax: glob
-*.gpx
-*.min.js
+
+ftp.properties
+
+# hg
+*.orig
+*.rej
+
+# backup files
+*.bak
+*.old
+*~
+
+# windows
+[Tt]humbs.db
+
+# mac
+.DS_Store
+
+# intellij
+*.iml
+
+# vim
+*.swp
+
+# svn
+.svn/
+_svn/
+svnignore[.-]*
+
+# cvs
+CVS/
+.#*
+.cvsignore
+
+# python
+*.pyo
+*.pyc
+
+# dreamweaver
+_notes/
+
+my_build/config/project.properties
+syntax: regexp
+
+# eclipse
+^\.refactorings/
+^\.settings/
+^\.classpath$
+^\.project$
+
+# intellij
+^\.idea/
+
+# html5boilerplate
+^build/config/css\.build\.js
+^build/config/js\.build\.js
+^build/config/project\.properties
+^intermediate/
+^publish/

@@ -1,36 +1,36 @@
 html, body {
     height: 100%;
-    margin: 0px;
-    padding: 0px;
+    margin: 0;
+    padding: 0;
     font-family: Arial, sans-serif;
     background: #FFF;
 }
-#stats {
+.stats {
     background: #2B5DAA;
     color: #FFF;
     border-collapse: collapse;
     height: 45px;
     margin: 0 auto;
 }
-#stats th, #stats td {
+.stats th, .stats td {
     border-right: 1px solid #FFF;
     padding: 0 12px;
     text-align: center;
 }
-#stats th.last, #stats td.last {
-    border-right: 0px none #FFF;
+.stats th.last, .stats td.last {
+    border-right: 0 none #FFF;
 }
-#stats th {
+.stats th {
     font-weight: normal;
     font-size: 12px;
 }
-#stats td {
+.stats td {
     font-weight: bold;
     font-size: 20px;
     text-shadow: 2px 2px #000;
     white-space: nowrap;
 }
-#map_canvas {
+.map_canvas {
     position: absolute;
     top: 45px;
     right: 0;
@@ -39,16 +39,16 @@ html, body {
 }
 
 @media screen and (max-width: 650px) {
-	#stats {
+	.stats {
 		width: 100%;
 	}
-	#stats th, #stats td {
+	.stats th, .stats td {
 		padding: 0;
 	}
-	#stats th {
+	.stats th {
 	    font-size: 9px;
 	}
-	#stats td {
+	.stats td {
 	    font-size: 9px;
 	    text-shadow: 1px 1px #000;
 	}

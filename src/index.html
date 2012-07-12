@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<title>Crydust - Runkeeper gradient map</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+    <table class="stats">
+        <tr>
+            <th>Date</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Distance</th>
+            <th>Duration</th>
+            <th>Avg. Pace</th>
+            <th class="last">Avg. Speed</th>
+        </tr>
+        <tr>
+            <td id="date"></td>
+            <td id="starttime"></td>
+            <td id="endtime"></td>
+            <td id="distance"></td>
+            <td id="duration"></td>
+            <td id="avgpace"></td>
+            <td id="avgspeed" class="last"></td>
+        </tr>
+    </table>
+    <div id="map_canvas" class="map_canvas"></div>
+
+    <script src="http://maps.googleapis.com/maps/api/js?sensor=false&amp;v=3"></script>
+    <!-- scripts concatenated and minified via ant build script-->
+    <script data-main="js/app" src="js/lib/require.js"></script>
+    <!-- end scripts-->
+</body>
+</html>
