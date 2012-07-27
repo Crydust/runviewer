@@ -3,7 +3,7 @@
 
 // IE 6: map doesn't show, works in IE 7
 
-define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga) {
+define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
 
     'use strict';
 
@@ -205,7 +205,7 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
         return this._time;
     };
     TrackPoint.prototype.getLatLng = function () {
-        return new google.maps.LatLng(this._lat, this._lng);
+        return new gmaps.LatLng(this._lat, this._lng);
     };
     TrackPoint.createFromNode = function (node) {
         // IE 8 doesn't understand the '-', 'Z' and has no textContent support
@@ -264,7 +264,7 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
     Track.prototype.getCenter = function () {
         var centerLat = _.reduce(this._points, function (memo, point) {return memo + point.getLat(); }, 0) / this._points.length;
         var centerLng = _.reduce(this._points, function (memo, point) {return memo + point.getLng(); }, 0) / this._points.length;
-        return new google.maps.LatLng(centerLat, centerLng);
+        return new gmaps.LatLng(centerLat, centerLng);
     };
     Track.prototype.getAverageSpeed = function () {
         return this.getTotalDistance() / this.getTotalTime();
@@ -290,7 +290,7 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
         return epochToTimeString(_.last(this._points).getTime());
     };
     Track.prototype.getLatLngBounds = function () {
-        var latlngbounds = new google.maps.LatLngBounds();
+        var latlngbounds = new gmaps.LatLngBounds();
         _.each(this._points, function (value) { latlngbounds.extend(value.getLatLng()); });
         return latlngbounds;
     };
@@ -353,7 +353,9 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
                 //'RK_gpx _2012-07-06_1334.gpx',
                 //'RK_gpx _2012-07-06_2229.gpx',
                 //'RK_gpx _2012-07-09_2104.gpx',
-                'RK_gpx _2012-07-11_2122.gpx'
+                //'RK_gpx _2012-07-11_2122.gpx',
+                //'RK_gpx _2012-07-13_2230.gpx',
+                'RK_gpx _2012-07-24_2233.gpx'
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
@@ -382,10 +384,10 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
             });
 
             // http://gmaps-samples-v3.googlecode.com/svn/trunk/styledmaps/wizard/index.html
-            var map = new google.maps.Map(document.getElementById('map_canvas'), {
+            var map = new gmaps.Map(document.getElementById('map_canvas'), {
                     zoom: 13,
                     center: center,
-                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    mapTypeId: gmaps.MapTypeId.ROADMAP,
                     //disableDefaultUI: true,
                     styles: [{
                         featureType: 'poi',
@@ -404,7 +406,7 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
 
             map.fitBounds(latLngBounds);
             
-            var rectangle = new google.maps.Rectangle();
+            var rectangle = new gmaps.Rectangle();
 
             function drawTrack() {
                 var currentColor = colors[1];
@@ -428,7 +430,7 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
                     currentPoint = coordinates[i];
                     currentColorPoints.push(currentPoint);
                     if (colors[i] !== currentColor || i === len - 1) {
-                        var polyline = new google.maps.Polyline({
+                        var polyline = new gmaps.Polyline({
                             path: currentColorPoints,
                             strokeColor: currentColor,
                             strokeOpacity: 1,
@@ -445,20 +447,20 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
 
             function drawMarkers() {
                 var km = 0;
-                var startIcon = new google.maps.Marker({
+                var startIcon = new gmaps.Marker({
                     position: coordinates[0],
                     map: map,
                     icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=A|69C24C|000000'}
                 });
-                var endIcon = new google.maps.Marker({
+                var endIcon = new gmaps.Marker({
                     position: _.last(coordinates),
                     map: map,
                     icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=B|69C24C|000000'}
                 });
-                var endInfoWindow = new google.maps.InfoWindow({
+                var endInfoWindow = new gmaps.InfoWindow({
                     content: 'Distance: ' + (_.last(distances) / 1000).toFixed(2) + ' km<br />Time: ' + secondsToLegible(_.last(times))
                 });
-                google.maps.event.addListener(endIcon, 'click', function () {
+                gmaps.event.addListener(endIcon, 'click', function () {
                     endInfoWindow.open(map, this);
                 });
                 _.each(distances, function (element, index, list) {
@@ -467,19 +469,19 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
                         km = currentKm;
                         var time = times[index];
                         
-                        var kmIcon = new google.maps.Marker({
+                        var kmIcon = new gmaps.Marker({
                             position: coordinates[index],
                             map: map,
                             //icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=' + km  + '|CCCCCC|000000'}
                             icon: {
-                                path: google.maps.SymbolPath.CIRCLE,
+                                path: gmaps.SymbolPath.CIRCLE,
                                 scale: 3
                             }
                         });
-                        var kmInfoWindow = new google.maps.InfoWindow({
+                        var kmInfoWindow = new gmaps.InfoWindow({
                             content: 'Distance: ' + km + ' km<br />Time: ' + secondsToLegible(time)
                         });
-                        google.maps.event.addListener(kmIcon, 'click', function () {
+                        gmaps.event.addListener(kmIcon, 'click', function () {
                             kmInfoWindow.open(map, this);
                         });
                     }
@@ -490,9 +492,9 @@ define(['lodash', 'gmaps', 'domReady!', 'ga'], function (_, google, document, ga
                 rectangle.setBounds(map.getBounds());
             }
 
-            google.maps.event.addListenerOnce(map, 'idle', drawTrack);
-            google.maps.event.addListenerOnce(map, 'idle', drawMarkers);
-            google.maps.event.addListener(map, 'bounds_changed', _.debounce(updateRectangleBounds, 50));
+            gmaps.event.addListenerOnce(map, 'idle', drawTrack);
+            gmaps.event.addListenerOnce(map, 'idle', drawMarkers);
+            gmaps.event.addListener(map, 'bounds_changed', _.debounce(updateRectangleBounds, 50));
 
         });
 

@@ -1,6 +1,11 @@
 syntax: glob
 
+*.gpx
+_*
+.*
 ftp.properties
+node_modules/
+tools/
 
 # hg
 *.orig

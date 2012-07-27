@@ -1,0 +1,58 @@
+/*global define, console, process */
+
+define(function (require) {
+    'use strict';
+    
+    var q = require('q'),
+        publishDir = 'publish',
+        srcDir = 'src';
+    
+    return {
+        //Builds the JS and CSS into one file each.
+        build: {
+            flags: {
+                //Does not print the build output.
+                'q': 'quiet'
+            },
+
+            run: function (d, v, namedArgs) {
+                q.call(function () {
+                    //Remove the old dir
+                    v.rm(publishDir);
+
+                    return undefined;
+                })
+                .then(function () {
+                    //JS go time
+                    //Still use require.js to load the app.js file.
+                    var opts = ['tools/r.js', '-o',
+                                    'appDir=' + srcDir,
+                                    'baseUrl=js/lib',
+                                    'paths.app=../app',
+                                    'name=app',
+                                    'dir=' + publishDir,
+                                    'optimize=uglify',
+                                    'uglify.mangle=true',
+                                    'optimizeCss=standard'];
+                    return v.spawn('node', opts, {
+                        useConsole: !namedArgs.quiet
+                    });
+                })
+                .then(function (buildOutput) {
+                    //Remove all the CSS except for the app.css, since it
+                    //inlines all the other ones.
+                    v.getFilteredFileList(publishDir + '/css').forEach(function (path) {
+                        if (!/app\.css$/.test(path)) {
+                            v.rm(path);
+                        }
+                    });
+
+                    return buildOutput;
+                })
+                .then(function (buildOutput) {
+                    d.resolve(buildOutput);
+                }, d.reject);
+            }
+        }
+    }
+});
