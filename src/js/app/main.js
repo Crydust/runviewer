@@ -355,7 +355,8 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
                 //'RK_gpx _2012-07-09_2104.gpx',
                 //'RK_gpx _2012-07-11_2122.gpx',
                 //'RK_gpx _2012-07-13_2230.gpx',
-                'RK_gpx _2012-07-24_2233.gpx'
+                //'RK_gpx _2012-07-24_2233.gpx',
+                'RK_gpx _2012-07-29_2030.gpx'
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];

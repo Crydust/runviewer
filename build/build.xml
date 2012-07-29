@@ -1,0 +1,310 @@
+<?xml version="1.0"?>
+<!DOCTYPE project>
+<project name="Boilerplate Build" default="build" basedir="../"> <!-- one back since we're in build/ -->
+
+    <!-- Test for Ant Version Delete this task and all instances of overwrite='no' if you can't upgrade to latest-->
+    <fail message="All features of the build script require Ant version 1.8.2 or greater. Please upgrade to the latest version or remove all instances of 'overwrite=no' (and this fail task) from the build script to continue">
+        <condition>
+            <not>
+                <antversion atleast="1.8.2"/>
+            </not>
+        </condition>
+    </fail>
+
+    <!-- load shell environment -->
+    <property environment="ENV" />
+
+    <!-- load property files -->
+    <property file="build/config/project.properties"/>
+    <loadproperties srcFile="build/config/default.properties"/>
+
+    <!-- Load in Ant-Contrib to give us access to some very useful tasks! -->
+    <!-- the .jar file is located in the tools directory -->
+    <taskdef resource="net/sf/antcontrib/antlib.xml" 
+        classpath="${dir.build.tools}/${tool.antcontrib}" />
+
+    <taskdef name="jscomp" classname="com.google.javascript.jscomp.ant.CompileTask"
+        classpath="${dir.build.tools}/${tool.closure}"/>
+
+    <!-- JSLint target, run separately -->
+    <target name="jslint">
+        <apply dir="${dir.source}/${dir.js}" executable="java" parallel="false" failonerror="true">
+            <fileset dir="${dir.source}" includes="${dir.js}/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
+            <arg value="-jar" />
+            <arg path="${dir.build.tools}/${tool.rhino}" />
+            <arg path="${dir.build.tools}/${tool.jslint}" />
+            <srcfile/>
+            <arg value="${tool.jslint.opts}" />
+        </apply>
+        <echo>JSHint Successful</echo>
+    </target>
+
+    <!-- JSHint target, run separately -->
+    <target name="jshint">
+        <apply dir="${dir.source}/${dir.js}" executable="java" parallel="false" failonerror="true">
+            <fileset dir="${dir.source}" includes="${dir.js}/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
+            <arg value="-jar" />
+            <arg path="${dir.build.tools}/${tool.rhino}" />
+            <arg path="${dir.build.tools}/${tool.jshint}" />
+            <srcfile/>
+            <arg value="${tool.jshint.opts}" />
+        </apply>
+        <echo>JSLint Successful</echo>
+    </target>
+
+    <!-- CSSLint target, run separately -->
+    <target name="csslint">
+        <apply dir="${dir.source}/${dir.css}" executable="java" parallel="false" failonerror="true">
+            <fileset dir="${dir.source}/${dir.css}" includes="**/*.css" excludes="**/*.min.css ${file.root.stylesheet}"/>
+            <arg value="-jar" />
+            <arg path="${dir.build.tools}/${tool.rhino}" />
+            <arg path="${dir.build.tools}/${tool.csslint}" />
+            <srcfile/>
+            <arg value="${tool.csslint.opts}" />
+        </apply>
+        <echo>CSSLint Successful</echo>
+    </target>
+
+    <target name="clean">
+        <!-- This is a private target -->
+        <echo message="Cleaning up previous build directory..."/>
+        <delete dir="${dir.publish}"/>
+        <delete file="${dir.build.config}/${tool.requirejs.jsbuild}"/>
+        <delete file="${dir.build.config}/${tool.requirejs.cssbuild}"/>
+    </target>
+
+    <target name="mkdirs" depends="clean">
+        <if>
+            <or>
+                <equals arg1="${dir.publish}" arg2="."/>
+                <equals arg1="${dir.publish}" arg2=".."/>
+                <equals arg1="${dir.publish}" arg2="/"/>
+                <equals arg1="${dir.publish}" arg2="./"/>
+                <equals arg1="${dir.publish}" arg2="../"/>
+            </or>
+            <then>
+                <fail message="Your dir.publish folder is set to ${dir.publish} which could delete your entire site or worse. Change it in project.properties"/>
+            </then>
+            <else>
+                <echo message="Creating directory structure... ${dir.publish}"/>
+                <mkdir dir="${dir.publish}"/>
+                <copy todir="${dir.publish}" includeEmptyDirs="true">
+                    <fileset dir="${dir.source}/" excludes="${file.default.exclude}, ${file.exclude}">
+                        <type type="dir"/>
+                    </fileset>
+                </copy>
+            </else>
+        </if>
+    </target>
+
+    <target name="copy" depends="mkdirs">
+        <echo message="Copying over new files..."/>
+        <copy todir="${dir.publish}">
+            <fileset dir="${dir.source}" excludes="${file.default.exclude}, ${file.exclude}">
+                <!-- exclude files that are superseded by optimized versions with different names -->
+                <!-- this is not strictly necessary, but it avoids putting unreferenced files into your server -->
+                <exclude name="${dir.js}/**/*.js"/>
+                <exclude name="${dir.js.modules}"/>
+                <exclude name="${dir.css}/**/*.css"/>
+                <exclude name="${file.manifest}"/>
+            </fileset>
+        </copy>
+
+        <echo message="A copy of all new non-dev files are now in: ${dir.publish}."/>
+    </target>
+
+    <target name="copyall" depends="mkdirs">
+        <!-- This is a private target -->
+        <!-- Copies all files, including .css and .js files for when you aren't minifying-->
+        <echo message="Copying over all files..."/>
+
+        <copy todir="${dir.publish}">
+            <fileset dir="${dir.source}" excludes="${file.default.exclude}, ${file.exclude}">
+                <exclude name="${file.manifest}"/>
+            </fileset>
+        </copy>
+
+        <echo message="A copy of all non-dev files are now in: ${dir.publish}."/>
+    </target>
+
+    <target name="optimizeWithRequireJs" description="Combine and minify files.">
+        <java classname="org.mozilla.javascript.tools.shell.Main">
+            <classpath>
+                <pathelement location="${dir.build.tools}/${tool.rhino}" />
+                <pathelement location="${dir.build.tools}/${tool.closure}" />
+            </classpath>
+            <arg path="${dir.build.tools}/${tool.rjs}"/>
+            <arg value="-o"/>
+            <arg path="${dir.build.config}/${tool.requirejs.config}"/>
+        </java>
+    </target>
+
+    <target name="checksumJS">
+        <checksum file="${dir.publish}/${dir.js}/${file.root.script}" algorithm="sha" property="script.fullsha" />
+        <propertyregex property="script.sha" input="${script.fullsha}" regexp=".{${hash.length}}" select="\0" />
+        <copy file="${dir.publish}/${dir.js}/${file.root.script}" 
+            tofile="${dir.publish}/${dir.js}/${script.sha}.js" />
+    </target>
+
+    <target name="checksumCSS">
+        <checksum file="${dir.publish}/${dir.css}/${file.root.stylesheet}" algorithm="sha" property="stylesheet.fullsha" />
+        <propertyregex property="stylesheet.sha" input="${stylesheet.fullsha}" regexp=".{${hash.length}}" select="\0" />
+        <copy file="${dir.publish}/${dir.css}/${file.root.stylesheet}" 
+            tofile="${dir.publish}/${dir.css}/${stylesheet.sha}.css" />
+    </target>
+
+    <target name="minifyJS" unless="scripts.create_source_map">
+        <!-- 
+        compilationLevel: whitespace, simple, advanced
+        warning: default, quiet, verbose
+        -->
+        <jscomp 
+            compilationLevel="${scripts.compilation.level}"
+            warning="${scripts.compilation.warninglevel}"
+            debug="false"
+            forceRecompile="true"
+            output="${dir.publish}/${dir.js}/${script.sha}.js">
+            <sources dir="${dir.publish}/${dir.js}">
+                <file name="${file.root.script}" />
+            </sources>
+        </jscomp>
+    </target>
+    
+    <target name="minifyJSWithSourcemap" if="scripts.create_source_map">
+        <exec executable="java" dir="${dir.publish}/${dir.js}">
+            <arg value="-jar"/>
+            <arg path="${dir.build.tools}/${tool.closure}"/>
+            <arg value="--js"/>
+            <arg value="${file.root.script}"/>
+            <arg value="--create_source_map"/>
+            <arg value="${file.root.script}.txt"/>
+            <arg value="--source_map_format=V3"/>
+            <arg value="--js_output_file"/>
+            <arg value="${script.sha}.js"/>
+        </exec>
+        <echo append="true" file="${dir.publish}/${dir.js}/${script.sha}.js">
+//@ sourceMappingURL=${file.root.script}.txt</echo>
+    </target>
+
+    <target name="minifyCSS">
+        <apply executable="java" parallel="false">
+            <fileset dir="${basedir}/${dir.publish}/${dir.css}" includes="${file.root.stylesheet}"/>
+            <arg line="-jar"/>
+            <arg path="${dir.build.tools}/${tool.yuicompressor}"/>
+            <srcfile/>
+            <arg line="-o"/>
+            <mapper type="merge" to="${basedir}/${dir.publish}/${dir.css}/${stylesheet.sha}.css"/>
+            <targetfile/>
+        </apply>
+    </target>
+
+    <target name="updateJSinHTML">
+        <echo message="${script.sha}" />
+        <replaceregexp 
+            match="(&lt;script\s+data-main=['&quot;]).+(['&quot;]\s+src=['&quot;]js/lib/require.js['&quot;]&gt;&lt;/script&gt;)"
+            replace="\1${dir.js}/${script.sha}.js\2"
+            flags="m">
+            <fileset dir="${dir.publish}" includes="${page-files}"/>
+        </replaceregexp>
+    </target>
+
+    <target name="updateCSSinHTML">
+        <replaceregexp
+            match="&lt;link(.+)href=['&quot;]?(.*)/${file.root.stylesheet}(?:\?.*)?['&quot;\s]?(.*/?&gt;)"
+            replace="&lt;link\1href=&quot;${dir.css}/${stylesheet.sha}.css&quot;\3" flags="m">
+            <fileset dir="${dir.publish}" includes="${page-files}"/>
+        </replaceregexp>
+    </target>
+
+    <target name="deleteIntermediateJS" unless="scripts.create_source_map">
+        <delete>
+            <fileset dir="${dir.publish}/${dir.js}">
+                <include name="**/*.js" />
+                <exclude name="${script.sha}.js" />
+                <exclude name="lib/require.js" />
+            </fileset>
+        </delete>
+    </target>
+
+    <target name="deleteIntermediateCSS">
+        <delete file="${dir.publish}/${dir.css}/${file.root.stylesheet}"/>
+        <delete>
+            <fileset dir="${dir.publish}/${dir.css}">
+                <include name="**/*.css" />
+                <exclude name="${stylesheet.sha}.css" />
+            </fileset>
+        </delete>
+    </target>
+
+    <target name="minifyHTML">
+        <apply executable="java" parallel="false" force="true" dest="${dir.publish}">
+            <fileset dir="${dir.publish}" includes="${page-files}"/>
+            <arg value="-jar"/>
+            <arg path="${dir.build.tools}/${tool.htmlcompressor}"/>
+            <arg line="${tool.htmlcompressor.opts} ${tool.htmlcompressor.javascript} ${tool.htmlcompressor.opts.extra}"/>
+            <srcfile/>
+            <arg value="-o"/>
+            <mapper type="identity"/>
+            <targetfile/>
+        </apply>
+    </target>
+    
+    <target name="deleteEmptyDirs">
+        <delete includeemptydirs="true">
+            <fileset dir="${dir.publish}">
+                <and>
+                    <size value="0"/>
+                    <type type="dir"/>
+                </and>
+            </fileset>
+        </delete>
+    </target>
+    
+    <target name="test">
+        <property name="test.absolutepath" location="${basedir}/${dir.test}/index.html" />
+        <propertyregex property="test.absoluteuri"
+                   input="${test.absolutepath}"
+                   regexp="\\"
+                   replace="/"
+                   global="true" />
+        <exec executable="${basedir}/${dir.build.tools}/${tool.phantomjs}" failonerror="true" osfamily="winnt">
+            <arg file="${basedir}/${dir.build.tools}/${tool.phantomjs.runner}"/>
+            <arg value="file:///${test.absoluteuri}"/>
+        </exec>
+    </target>
+    
+    <target name="ftp.deploy" depends="build">
+        <taskdef name="ftp" classname="org.apache.tools.ant.taskdefs.optional.net.FTP"/>
+        <property file="build/config/ftp.properties"/>
+        <ftp server="${ftp.server}"
+            port="${ftp.port}"
+            remotedir="${ftp.remotedir}"
+            userid="${ftp.userid}"
+            password="${ftp.password}"
+            passive="yes"
+            depends="yes"
+            binary="yes"
+            verbose="yes">
+            <fileset dir="./${dir.publish}"/>
+        </ftp>
+    </target>
+    
+    <target name="sftp.deploy" depends="build">
+        <property file="build/config/ftp.properties"/>
+        <scp todir="${ftp.userid}@${ftp.server}:${ftp.remotedir}"
+            port="${ftp.port}"
+            password="${ftp.password}"
+            trust="yes"
+            sftp="yes"
+            verbose="yes">
+            <fileset dir="./${dir.publish}"/>
+        </scp>
+    </target>
+
+    <target name="lint" depends="jslint, jshint, csslint"></target>
+    <target name="js" depends="optimizeWithRequireJs, checksumJS, minifyJS, minifyJSWithSourcemap, updateJSinHTML, deleteIntermediateJS"></target>
+    <target name="css" depends="optimizeWithRequireJs, checksumCSS, minifyCSS, updateCSSinHTML, updateCSSinHTML, deleteIntermediateCSS"></target>
+    
+    <target name="build" depends="lint, test, clean, copy, js, css, minifyHTML, deleteEmptyDirs"></target>
+
+</project>
