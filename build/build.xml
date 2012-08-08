@@ -29,27 +29,29 @@
     <!-- JSLint target, run separately -->
     <target name="jslint">
         <apply dir="${dir.source}/${dir.js}" executable="java" parallel="false" failonerror="true">
-            <fileset dir="${dir.source}" includes="${dir.js}/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
+            <fileset dir="${dir.source}" includes="${dir.js}/**/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
             <arg value="-jar" />
             <arg path="${dir.build.tools}/${tool.rhino}" />
             <arg path="${dir.build.tools}/${tool.jslint}" />
             <srcfile/>
             <arg value="${tool.jslint.opts}" />
         </apply>
-        <echo>JSHint Successful</echo>
+        <echo>JSLint Successful</echo>
     </target>
 
     <!-- JSHint target, run separately -->
     <target name="jshint">
+    <!--
         <apply dir="${dir.source}/${dir.js}" executable="java" parallel="false" failonerror="true">
-            <fileset dir="${dir.source}" includes="${dir.js}/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
+            <fileset dir="${dir.source}" includes="${dir.js}/**/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
             <arg value="-jar" />
             <arg path="${dir.build.tools}/${tool.rhino}" />
             <arg path="${dir.build.tools}/${tool.jshint}" />
             <srcfile/>
             <arg value="${tool.jshint.opts}" />
         </apply>
-        <echo>JSLint Successful</echo>
+        <echo>JSHint Successful</echo>
+        -->
     </target>
 
     <!-- CSSLint target, run separately -->
@@ -295,8 +297,7 @@
             port="${ftp.port}"
             password="${ftp.password}"
             trust="yes"
-            sftp="yes"
-            verbose="yes">
+            sftp="yes">
             <fileset dir="./${dir.publish}"/>
         </scp>
     </target>

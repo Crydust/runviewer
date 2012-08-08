@@ -1,4 +1,4 @@
-/*jslint nomen: true, plusplus: true, vars: true */
+/*jslint nomen: false, plusplus: true, vars: true */
 /*global define: false, window:false, XMLHttpRequest: false, ActiveXObject: false, DOMParser: false */
 
 // IE 6: map doesn't show, works in IE 7
@@ -26,6 +26,50 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
         this._rc = resolvedCallback || NOOP;
         this._ec = errorCallback || NOOP;
     };
+    
+        console.log({
+            'c7_2': [-0.0952381, 0.14285714, 0.28571429, 0.33333333, 0.28571429, 0.14285714, -0.0952381],
+            'c7_4': [0.02164502, -0.12987013, 0.32467532, 0.56709957, 0.32467532, -0.12987013, 0.02164502],
+            'c7_X': [1/18, 2/18, 3/18, 6/18, 3/18, 2/18, 1/18]});
+    /**
+     * Savitzky-Golay filter with precomputed coeficients
+     */
+    function sgFilter(numbers_arr, window_size, order) {
+        var result = [], i, j;
+        var coefficients = {
+            'c5_1': [1/5, 1/5, 1/5, 1/5, 1/5],
+            'c5_2': [-0.08571429, 0.34285714, 0.48571429, 0.34285714, -0.08571429],
+            'c7_1': [1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7],
+            'c7_2': [-0.0952381, 0.14285714, 0.28571429, 0.33333333, 0.28571429, 0.14285714, -0.0952381],
+            'c7_4': [0.02164502, -0.12987013, 0.32467532, 0.56709957, 0.32467532, -0.12987013, 0.02164502],
+            'c7_X': [1/18, 2/18, 3/18, 6/18, 3/18, 2/18, 1/18],
+            'c9_1': [1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9],
+            'c9_2': [-0.09090909, 0.06060606, 0.16883117, 0.23376623, 0.25541126, 0.23376623, 0.16883117, 0.06060606, -0.09090909],
+            'c9_4': [0.03496503, -0.12820513, 0.06993007, 0.31468531, 0.41724942, 0.31468531, 0.06993007, -0.12820513, 0.03496503],
+            'c9_6': [-0.00543901, 0.04351204, -0.15229215, 0.3045843, 0.61926962, 0.3045843, -0.15229215, 0.04351204, -0.00543901],
+            'c11_1': [1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11],
+            'c11_2': [-0.08391608, 0.02097902, 0.1025641, 0.16083916, 0.1958042, 0.20745921, 0.1958042, 0.16083916, 0.1025641, 0.02097902, -0.08391608],
+            'c11_4': [0.04195804, -0.1048951, -0.02331002, 0.13986014, 0.27972028, 0.33333333, 0.27972028, 0.13986014, -0.02331002, -0.1048951, 0.04195804],
+            'c11_6': [-0.01151789, 0.06622789, -0.12669683, 0.01151789, 0.32250103, 0.47593583, 0.32250103, 0.01151789, -0.12669683, 0.06622789, -0.01151789],
+            'c11_8': [0.00136396, -0.01363961, 0.06137825, -0.16367533, 0.28643183, 0.6562818, 0.28643183, -0.16367533, 0.06137825, -0.01363961, 0.00136396]
+        }['c' + window_size + '_' + order];
+        var half_window = Math.floor(window_size / 2);
+        var padleft = numbers_arr.slice(1, half_window + 1).reverse();
+        var padRight = numbers_arr.slice(numbers_arr.length - half_window - 1, numbers_arr.length - 1).reverse();
+        for (i = 0; i < half_window; i += 1) {
+            padleft[i] = (numbers_arr[0] * 2) - padleft[i];
+            padRight[i] = (numbers_arr[numbers_arr.length-1] * 2) - padRight[i];
+        }
+        var padded_arr = padleft.concat(numbers_arr).concat(padRight);
+        for (i = half_window; i < padded_arr.length - half_window; i += 1) {
+            var newValue = 0;
+            for (j = 0; j < window_size; j += 1) {
+                newValue += coefficients[j] * padded_arr[i+j-half_window];
+            }
+            result.push(newValue);
+        }
+        return result;
+    }
 
     function fetchTextAsync(url) {
         var promise = new Promise();
@@ -174,7 +218,20 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
 
     function speedToColor(speed) {
         var kmh = msToKmh(speed);
-
+        var colors = ['#BB2222', 
+        //'#BB3522', '#BB4822', '#BB5B22', 
+        '#BB6E22', 
+        //'#BB8222', '#BB9522', '#BBA822', 
+        '#BBBB22', 
+        //'#A8BB22', '#95BB22', '#82BB22', 
+        '#6EBB22', 
+        //'#5BBB22', '#48BB22', '#35BB22', 
+        '#22BB22'];
+        var minspeed = 5;
+        var maxspeed = 15;
+        var index = Math.round((colors.length - 1) * Math.min(1.0, Math.max(0.0, (kmh - minspeed) / (maxspeed - minspeed))));
+        return colors[index];
+        /*
         if (kmh < 7) {
             return '#B22424';
         } else if (kmh < 8) {
@@ -188,6 +245,7 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
         } else {
             return '#24B224';
         }
+        */
     }
 
     function TrackPoint(lat, lng, time) {
@@ -307,16 +365,18 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
             }
             var i, len;
             track.addPoint(TrackPoint.createFromNode(trkptNodes[0]));
-            for (i = 0, len = trkptNodes.length; i < len; i++) {
+            for (i = 0, len = trkptNodes.length; i < len; i += 1) {
                 track.addPoint(TrackPoint.createFromNode(trkptNodes[i]));
             }
             promise.resolve(track);
         });
         return promise;
     };
-
-    Track.prototype.toTrackWithWalkingAverage = function (n) {
+    
+    Track.prototype.toTrackWithWalkingAverage = function () {
         var result = new Track();
+        
+        
         _.each(_.map(this._points, function (element, index, list) {
             var els;
             if (index === 0 || index === list.length - 1) {
@@ -345,7 +405,17 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
         });
         return result;
     };
-
+    Track.prototype.toTrackWithSgFilter = function () {
+        var result = new Track();
+        var lats = sgFilter(_.map(this._points, function (el) { return el.getLat(); }), 7, 2);
+        var lngs = sgFilter(_.map(this._points, function (el) { return el.getLng(); }), 7, 2);
+        var times = sgFilter(_.map(this._points, function (el) { return el.getTime(); }), 7, 2);
+        _.each(this._points, function (element, index, list) { 
+            result.addPoint(new TrackPoint(lats[index], lngs[index], times[index]));
+        });
+        return result;
+    };
+    
     function initialize() {
         var urls = [
                 //'RK_gpx _2012-07-01_2045.gpx',
@@ -356,14 +426,17 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
                 //'RK_gpx _2012-07-11_2122.gpx',
                 //'RK_gpx _2012-07-13_2230.gpx',
                 //'RK_gpx _2012-07-24_2233.gpx',
-                'RK_gpx _2012-07-29_2030.gpx'
+                //'RK_gpx _2012-07-29_2030.gpx',
+                //'RK_gpx _2012-08-05_2023.gpx',
+                'RK_gpx _2012-08-07_1847.gpx'
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
 
         Track.loadFromXml(url).then(function (track) {
 
-            track = track.toTrackWithWalkingAverage();
+            //track = track.toTrackWithWalkingAverage();
+            track = track.toTrackWithSgFilter();
 
             var center = track.getCenter();
             var colors = _.map(track.getSpeeds(), speedToColor);
@@ -427,7 +500,7 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
                     bounds: map.getBounds()
                 });
 
-                for (i = 1, len = colors.length; i < len; i++) {
+                for (i = 1, len = colors.length; i < len; i += 1) {
                     currentPoint = coordinates[i];
                     currentColorPoints.push(currentPoint);
                     if (colors[i] !== currentColor || i === len - 1) {
