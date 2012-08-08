@@ -54,6 +54,14 @@
         -->
     </target>
 
+    <target name="gjslint">
+        <apply dir="${dir.source}/${dir.js}" executable="gjslint" parallel="false" failonerror="true">
+            <fileset dir="${dir.source}" includes="${dir.js}/**/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
+            <srcfile/>
+        </apply>
+        <echo>gjslint Successful</echo>
+    </target>
+
     <!-- CSSLint target, run separately -->
     <target name="csslint">
         <apply dir="${dir.source}/${dir.css}" executable="java" parallel="false" failonerror="true">
@@ -302,7 +310,7 @@
         </scp>
     </target>
 
-    <target name="lint" depends="jslint, jshint, csslint"></target>
+    <target name="lint" depends="gjslint, jslint, jshint, csslint"></target>
     <target name="js" depends="optimizeWithRequireJs, checksumJS, minifyJS, minifyJSWithSourcemap, updateJSinHTML, deleteIntermediateJS"></target>
     <target name="css" depends="optimizeWithRequireJs, checksumCSS, minifyCSS, updateCSSinHTML, updateCSSinHTML, deleteIntermediateCSS"></target>
     

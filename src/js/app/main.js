@@ -1,13 +1,14 @@
 /*jslint nomen: false, plusplus: true, vars: true */
-/*global define: false, window:false, XMLHttpRequest: false, ActiveXObject: false, DOMParser: false */
+/*global define: false, window:false, XMLHttpRequest: false,
+ActiveXObject: false, DOMParser: false */
 
 // IE 6: map doesn't show, works in IE 7
 
-define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
+define(['lodash', 'gm', 'domReady!'], function(_, gmaps, document) {
 
     'use strict';
 
-    var NOOP = function () {};
+    var NOOP = function() {};
 
     /**
      * worst Promise implementation ever
@@ -16,55 +17,40 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
         this._rc = NOOP;
         this._ec = NOOP;
     }
-    Promise.prototype.resolve = function (value) {
+    Promise.prototype.resolve = function(value) {
         this._rc.call(this, value);
     };
-    Promise.prototype.reject = function (error) {
+    Promise.prototype.reject = function(error) {
         this._ec.call(this, error);
     };
-    Promise.prototype.then = function (resolvedCallback, errorCallback) {
+    Promise.prototype.then = function(resolvedCallback, errorCallback) {
         this._rc = resolvedCallback || NOOP;
         this._ec = errorCallback || NOOP;
     };
-    
-        console.log({
-            'c7_2': [-0.0952381, 0.14285714, 0.28571429, 0.33333333, 0.28571429, 0.14285714, -0.0952381],
-            'c7_4': [0.02164502, -0.12987013, 0.32467532, 0.56709957, 0.32467532, -0.12987013, 0.02164502],
-            'c7_X': [1/18, 2/18, 3/18, 6/18, 3/18, 2/18, 1/18]});
+
     /**
      * Savitzky-Golay filter with precomputed coeficients
      */
-    function sgFilter(numbers_arr, window_size, order) {
+    function sgFilter(numbers_arr) {
+        var window_size = 7;
+        var order = 2;
         var result = [], i, j;
-        var coefficients = {
-            'c5_1': [1/5, 1/5, 1/5, 1/5, 1/5],
-            'c5_2': [-0.08571429, 0.34285714, 0.48571429, 0.34285714, -0.08571429],
-            'c7_1': [1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7],
-            'c7_2': [-0.0952381, 0.14285714, 0.28571429, 0.33333333, 0.28571429, 0.14285714, -0.0952381],
-            'c7_4': [0.02164502, -0.12987013, 0.32467532, 0.56709957, 0.32467532, -0.12987013, 0.02164502],
-            'c7_X': [1/18, 2/18, 3/18, 6/18, 3/18, 2/18, 1/18],
-            'c9_1': [1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9, 1/9],
-            'c9_2': [-0.09090909, 0.06060606, 0.16883117, 0.23376623, 0.25541126, 0.23376623, 0.16883117, 0.06060606, -0.09090909],
-            'c9_4': [0.03496503, -0.12820513, 0.06993007, 0.31468531, 0.41724942, 0.31468531, 0.06993007, -0.12820513, 0.03496503],
-            'c9_6': [-0.00543901, 0.04351204, -0.15229215, 0.3045843, 0.61926962, 0.3045843, -0.15229215, 0.04351204, -0.00543901],
-            'c11_1': [1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11, 1/11],
-            'c11_2': [-0.08391608, 0.02097902, 0.1025641, 0.16083916, 0.1958042, 0.20745921, 0.1958042, 0.16083916, 0.1025641, 0.02097902, -0.08391608],
-            'c11_4': [0.04195804, -0.1048951, -0.02331002, 0.13986014, 0.27972028, 0.33333333, 0.27972028, 0.13986014, -0.02331002, -0.1048951, 0.04195804],
-            'c11_6': [-0.01151789, 0.06622789, -0.12669683, 0.01151789, 0.32250103, 0.47593583, 0.32250103, 0.01151789, -0.12669683, 0.06622789, -0.01151789],
-            'c11_8': [0.00136396, -0.01363961, 0.06137825, -0.16367533, 0.28643183, 0.6562818, 0.28643183, -0.16367533, 0.06137825, -0.01363961, 0.00136396]
-        }['c' + window_size + '_' + order];
+        var coefficients = [-0.0952381, 0.14285714, 0.28571429, 0.33333333,
+                0.28571429, 0.14285714, -0.0952381];
         var half_window = Math.floor(window_size / 2);
         var padleft = numbers_arr.slice(1, half_window + 1).reverse();
-        var padRight = numbers_arr.slice(numbers_arr.length - half_window - 1, numbers_arr.length - 1).reverse();
+        var padRight = numbers_arr.slice(numbers_arr.length - half_window - 1,
+        numbers_arr.length - 1).reverse();
         for (i = 0; i < half_window; i += 1) {
             padleft[i] = (numbers_arr[0] * 2) - padleft[i];
-            padRight[i] = (numbers_arr[numbers_arr.length-1] * 2) - padRight[i];
+            padRight[i] = (numbers_arr[numbers_arr.length - 1] * 2) -
+                    padRight[i];
         }
         var padded_arr = padleft.concat(numbers_arr).concat(padRight);
         for (i = half_window; i < padded_arr.length - half_window; i += 1) {
             var newValue = 0;
             for (j = 0; j < window_size; j += 1) {
-                newValue += coefficients[j] * padded_arr[i+j-half_window];
+                newValue += coefficients[j] * padded_arr[i + j - half_window];
             }
             result.push(newValue);
         }
@@ -73,11 +59,12 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
 
     function fetchTextAsync(url) {
         var promise = new Promise();
-        var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('MSXML2.XMLHTTP.3.0');
+        var xhr = XMLHttpRequest ?
+            new XMLHttpRequest() : new ActiveXObject('MSXML2.XMLHTTP.3.0');
         if (xhr.overrideMimeType) {
             xhr.overrideMimeType('text/plain; charset=UTF-8');
         }
-        xhr.onreadystatechange = function () {
+        xhr.onreadystatechange = function() {
             if (xhr.readyState === 4) {
                 if (xhr.status === 200) {
                     promise.resolve(xhr.responseText);
@@ -93,14 +80,16 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
 
     function loadXml(url) {
         var promise = new Promise();
-        fetchTextAsync(url).then(function (responseText) {
+        fetchTextAsync(url).then(function(responseText) {
             // xml is invalid sometimes
             if (responseText.indexOf('</trkseg>') === -1) {
-                responseText = responseText.replace('</trk>', '</trkseg></trk>');
+                responseText = responseText.replace(
+                        '</trk>', '</trkseg></trk>');
             }
             var xml;
             if (DOMParser) {
-                xml = (new DOMParser()).parseFromString(responseText, 'text/xml');
+                xml = (new DOMParser()).parseFromString(
+                        responseText, 'text/xml');
             } else {
                 xml = new ActiveXObject('Microsoft.XMLDOM');
                 xml.async = false;
@@ -112,8 +101,8 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
     }
 
     /**
-     * @param {number} degrees
-     * @return {number} radians
+     * @param {number} degrees angle.
+     * @return {number} radians.
      */
     function toRad(degrees) {
         return degrees * Math.PI / 180;
@@ -125,11 +114,11 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
      *
      * from: Haversine formula - R. W. Sinnott, "Virtues of the Haversine",
      *       Sky and Telescope, vol 68, no 2, 1984
-     * 
-     * @param {LatLng} from
-     * @param {LatLng} to
-     * @param {number=} radius
-     * @return {number} distance in meters
+     *
+     * @param {LatLng} from position.
+     * @param {LatLng} to position.
+     * @param {number=} radius of the earth.
+     * @return {number} distance in meters.
      */
     function computeDistanceBetween(from, to) {
         // earth radius as used in gps systems (WGS-84)
@@ -218,18 +207,20 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
 
     function speedToColor(speed) {
         var kmh = msToKmh(speed);
-        var colors = ['#BB2222', 
-        //'#BB3522', '#BB4822', '#BB5B22', 
-        '#BB6E22', 
-        //'#BB8222', '#BB9522', '#BBA822', 
-        '#BBBB22', 
-        //'#A8BB22', '#95BB22', '#82BB22', 
-        '#6EBB22', 
-        //'#5BBB22', '#48BB22', '#35BB22', 
+        var colors = ['#BB2222',
+        //'#BB3522', '#BB4822', '#BB5B22',
+        '#BB6E22',
+        //'#BB8222', '#BB9522', '#BBA822',
+        '#BBBB22',
+        //'#A8BB22', '#95BB22', '#82BB22',
+        '#6EBB22',
+        //'#5BBB22', '#48BB22', '#35BB22',
         '#22BB22'];
         var minspeed = 5;
         var maxspeed = 15;
-        var index = Math.round((colors.length - 1) * Math.min(1.0, Math.max(0.0, (kmh - minspeed) / (maxspeed - minspeed))));
+        var index = Math.round((colors.length - 1) *
+                Math.min(1.0,
+                Math.max(0.0, (kmh - minspeed) / (maxspeed - minspeed))));
         return colors[index];
         /*
         if (kmh < 7) {
@@ -253,19 +244,19 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
         this._lng = lng;
         this._time = time;
     }
-    TrackPoint.prototype.getLat = function () {
+    TrackPoint.prototype.getLat = function() {
         return this._lat;
     };
-    TrackPoint.prototype.getLng = function () {
+    TrackPoint.prototype.getLng = function() {
         return this._lng;
     };
-    TrackPoint.prototype.getTime = function () {
+    TrackPoint.prototype.getTime = function() {
         return this._time;
     };
-    TrackPoint.prototype.getLatLng = function () {
+    TrackPoint.prototype.getLatLng = function() {
         return new gmaps.LatLng(this._lat, this._lng);
     };
-    TrackPoint.createFromNode = function (node) {
+    TrackPoint.createFromNode = function(node) {
         // IE 8 doesn't understand the '-', 'Z' and has no textContent support
         var timeNode = node.getElementsByTagName('time')[0];
         var timeText = timeNode.textContent || timeNode.text;
@@ -286,7 +277,7 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
         //cumulative time to here in seconds (starts at zero)
         this._times = [];
     }
-    Track.prototype.addPoint = function (point) {
+    Track.prototype.addPoint = function(point) {
         if (this._points.length === 0) {
             this._points.push(point);
             this._speeds.push(0);
@@ -296,10 +287,12 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
             var previousPoint = _.last(this._points);
             var previousDistance = _.last(this._distances);
             var previousTime = _.last(this._times);
-            var positionDiff = computeDistanceBetween(previousPoint.getLatLng(), point.getLatLng());
+            var positionDiff = computeDistanceBetween(
+                    previousPoint.getLatLng(), point.getLatLng());
             var timeDiff = point.getTime() - previousPoint.getTime();
             var speed = positionDiff / timeDiff;
-            if (isFinite(speed) && !isNaN(speed) && speed > kmhToMs(0.01) && speed < kmhToMs(50)) {
+            if (isFinite(speed) && !isNaN(speed) &&
+                    speed > kmhToMs(0.01) && speed < kmhToMs(50)) {
                 this._points.push(point);
                 this._speeds.push(speed);
                 this._distances.push(previousDistance + positionDiff);
@@ -307,58 +300,67 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
             }
         }
     };
-    Track.prototype.getCoordinates = function () {
-        return _.map(this._points, function (point) {return point.getLatLng(); });
+    Track.prototype.getCoordinates = function() {
+        return _.map(this._points, function(point) {
+                return point.getLatLng();
+            });
     };
-    Track.prototype.getSpeeds = function () {
+    Track.prototype.getSpeeds = function() {
         return this._speeds;
     };
-    Track.prototype.getDistances = function () {
+    Track.prototype.getDistances = function() {
         return this._distances;
     };
-    Track.prototype.getTimes = function () {
+    Track.prototype.getTimes = function() {
         return this._times;
     };
-    Track.prototype.getCenter = function () {
-        var centerLat = _.reduce(this._points, function (memo, point) {return memo + point.getLat(); }, 0) / this._points.length;
-        var centerLng = _.reduce(this._points, function (memo, point) {return memo + point.getLng(); }, 0) / this._points.length;
+    Track.prototype.getCenter = function() {
+        var centerLat = _.reduce(this._points, function(memo, point) {
+                return memo + point.getLat();
+            }, 0) / this._points.length;
+        var centerLng = _.reduce(this._points, function(memo, point) {
+                return memo + point.getLng();
+            }, 0) / this._points.length;
         return new gmaps.LatLng(centerLat, centerLng);
     };
-    Track.prototype.getAverageSpeed = function () {
+    Track.prototype.getAverageSpeed = function() {
         return this.getTotalDistance() / this.getTotalTime();
     };
-    Track.prototype.getAveragePace = function () {
+    Track.prototype.getAveragePace = function() {
         var kilometers = this.getTotalDistance() / 1000;
         var seconds_per_kilometer = this.getTotalTime() / kilometers;
         return secondsToLegible(seconds_per_kilometer);
     };
-    Track.prototype.getTotalDistance = function () {
+    Track.prototype.getTotalDistance = function() {
         return _.last(this._distances);
     };
-    Track.prototype.getTotalTime = function () {
+    Track.prototype.getTotalTime = function() {
         return _.last(this._times);
     };
-    Track.prototype.getDate = function () {
+    Track.prototype.getDate = function() {
         return epochToDateString(this._points[0].getTime());
     };
-    Track.prototype.getStartTime = function () {
+    Track.prototype.getStartTime = function() {
         return epochToTimeString(this._points[0].getTime());
     };
-    Track.prototype.getEndTime = function () {
+    Track.prototype.getEndTime = function() {
         return epochToTimeString(_.last(this._points).getTime());
     };
-    Track.prototype.getLatLngBounds = function () {
+    Track.prototype.getLatLngBounds = function() {
         var latlngbounds = new gmaps.LatLngBounds();
-        _.each(this._points, function (value) { latlngbounds.extend(value.getLatLng()); });
+        _.each(this._points, function(value) {
+                latlngbounds.extend(value.getLatLng());
+            });
         return latlngbounds;
     };
-    Track.loadFromXml = function (url) {
+    Track.loadFromXml = function(url) {
         var promise = new Promise();
-        loadXml(url).then(function (xml) {
+        loadXml(url).then(function(xml) {
             var track = new Track();
             var trkptNodes;
+            var trkptNS = 'http://www.topografix.com/GPX/1/1';
             if (xml.getElementsByTagNameNS) {
-                trkptNodes = xml.getElementsByTagNameNS('http://www.topografix.com/GPX/1/1', 'trkpt');
+                trkptNodes = xml.getElementsByTagNameNS(trkptNS, 'trkpt');
             } else {
                 //IE 8 doesn't support getElementsByTagNameNS
                 trkptNodes = xml.getElementsByTagName('trkpt');
@@ -372,12 +374,12 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
         });
         return promise;
     };
-    
-    Track.prototype.toTrackWithWalkingAverage = function () {
+
+    Track.prototype.toTrackWithWalkingAverage = function() {
         var result = new Track();
-        
-        
-        _.each(_.map(this._points, function (element, index, list) {
+
+
+        _.each(_.map(this._points, function(element, index, list) {
             var els;
             if (index === 0 || index === list.length - 1) {
                 els = [element];
@@ -394,28 +396,35 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
                     list[index + 3]];
             }
             var result = new TrackPoint(
-                _.reduce(els, function (memo, el) { return memo + el.getLat(); }, 0) / els.length,
-                _.reduce(els, function (memo, el) { return memo + el.getLng(); }, 0) / els.length,
-                _.reduce(els, function (memo, el) { return memo + el.getTime(); }, 0) / els.length
+                _.reduce(els, function(memo, el) {
+                        return memo + el.getLat(); }, 0) / els.length,
+                _.reduce(els, function(memo, el) {
+                        return memo + el.getLng(); }, 0) / els.length,
+                _.reduce(els, function(memo, el) {
+                        return memo + el.getTime(); }, 0) / els.length
             );
             return result;
-            
-        }), function (element, index, list) {
+
+        }), function(element, index, list) {
             result.addPoint(element);
         });
         return result;
     };
-    Track.prototype.toTrackWithSgFilter = function () {
+    Track.prototype.toTrackWithSgFilter = function() {
         var result = new Track();
-        var lats = sgFilter(_.map(this._points, function (el) { return el.getLat(); }), 7, 2);
-        var lngs = sgFilter(_.map(this._points, function (el) { return el.getLng(); }), 7, 2);
-        var times = sgFilter(_.map(this._points, function (el) { return el.getTime(); }), 7, 2);
-        _.each(this._points, function (element, index, list) { 
-            result.addPoint(new TrackPoint(lats[index], lngs[index], times[index]));
+        var lats = sgFilter(_.map(this._points, function(el) {
+                return el.getLat(); }));
+        var lngs = sgFilter(_.map(this._points, function(el) {
+                return el.getLng(); }));
+        var times = sgFilter(_.map(this._points, function(el) {
+                return el.getTime(); }));
+        _.each(this._points, function(element, index, list) {
+            result.addPoint(new TrackPoint(
+                    lats[index], lngs[index], times[index]));
         });
         return result;
     };
-    
+
     function initialize() {
         var urls = [
                 //'RK_gpx _2012-07-01_2045.gpx',
@@ -433,7 +442,7 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
 
-        Track.loadFromXml(url).then(function (track) {
+        Track.loadFromXml(url).then(function(track) {
 
             //track = track.toTrackWithWalkingAverage();
             track = track.toTrackWithSgFilter();
@@ -449,11 +458,13 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
                 'date': track.getDate(),
                 'starttime': track.getStartTime(),
                 'endtime': track.getEndTime(),
-                'distance': (track.getTotalDistance() / 1000).toFixed(2) + ' km',
+                'distance': (track.getTotalDistance() / 1000).toFixed(2) +
+                        ' km',
                 'duration': secondsToLegible(track.getTotalTime()),
                 'avgpace': track.getAveragePace() + ' /km',
-                'avgspeed': msToKmh(track.getAverageSpeed()).toFixed(2) + ' km/h'
-            }, function (value, key, list) {
+                'avgspeed': msToKmh(track.getAverageSpeed()).toFixed(2) +
+                        ' km/h'
+            }, function(value, key, list) {
                 document.getElementById(key).innerHTML = value;
             });
 
@@ -479,7 +490,7 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
                 });
 
             map.fitBounds(latLngBounds);
-            
+
             var rectangle = new gmaps.Rectangle();
 
             function drawTrack() {
@@ -524,38 +535,46 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
                 var startIcon = new gmaps.Marker({
                     position: coordinates[0],
                     map: map,
-                    icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=A|69C24C|000000'}
+                    icon: {url: 'http://chart.googleapis.com/chart?' +
+                            'chst=d_map_pin_letter&chld=A|69C24C|000000'}
                 });
                 var endIcon = new gmaps.Marker({
                     position: _.last(coordinates),
                     map: map,
-                    icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=B|69C24C|000000'}
+                    icon: {url: 'http://chart.googleapis.com/chart?' +
+                            'chst=d_map_pin_letter&chld=B|69C24C|000000'}
                 });
                 var endInfoWindow = new gmaps.InfoWindow({
-                    content: 'Distance: ' + (_.last(distances) / 1000).toFixed(2) + ' km<br />Time: ' + secondsToLegible(_.last(times))
+                    content: 'Distance: ' +
+                            (_.last(distances) / 1000).toFixed(2) +
+                            ' km<br />Time: ' +
+                            secondsToLegible(_.last(times))
                 });
-                gmaps.event.addListener(endIcon, 'click', function () {
+                gmaps.event.addListener(endIcon, 'click', function() {
                     endInfoWindow.open(map, this);
                 });
-                _.each(distances, function (element, index, list) {
+                _.each(distances, function(element, index, list) {
                     var currentKm = Math.floor(element / 1000);
                     if (currentKm > km) {
                         km = currentKm;
                         var time = times[index];
-                        
+
+                        // icon: {url: 'http://chart.googleapis.com/chart' +
+                        // '?chst=d_map_pin_letter&chld=' + km  +
+                        // '|CCCCCC|000000'}
                         var kmIcon = new gmaps.Marker({
                             position: coordinates[index],
                             map: map,
-                            //icon: {url: 'http://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=' + km  + '|CCCCCC|000000'}
                             icon: {
                                 path: gmaps.SymbolPath.CIRCLE,
                                 scale: 3
                             }
                         });
                         var kmInfoWindow = new gmaps.InfoWindow({
-                            content: 'Distance: ' + km + ' km<br />Time: ' + secondsToLegible(time)
+                            content: 'Distance: ' + km + ' km<br />Time: ' +
+                                    secondsToLegible(time)
                         });
-                        gmaps.event.addListener(kmIcon, 'click', function () {
+                        gmaps.event.addListener(kmIcon, 'click', function() {
                             kmInfoWindow.open(map, this);
                         });
                     }
@@ -568,13 +587,13 @@ define(['lodash', 'gm', 'domReady!', 'ga'], function (_, gmaps, document, ga) {
 
             gmaps.event.addListenerOnce(map, 'idle', drawTrack);
             gmaps.event.addListenerOnce(map, 'idle', drawMarkers);
-            gmaps.event.addListener(map, 'bounds_changed', _.debounce(updateRectangleBounds, 50));
-
+            gmaps.event.addListener(map, 'bounds_changed',
+                    _.debounce(updateRectangleBounds, 50));
         });
 
     }
 
     initialize();
-    
+
     return {};
 });
