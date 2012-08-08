@@ -1,4 +1,5 @@
 /*jslint nomen: false, plusplus: true, vars: true */
+/*jshint nomen: false */
 /*global define: false, window:false, XMLHttpRequest: false,
 ActiveXObject: false, DOMParser: false */
 

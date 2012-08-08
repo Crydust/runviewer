@@ -41,7 +41,6 @@
 
     <!-- JSHint target, run separately -->
     <target name="jshint">
-    <!--
         <apply dir="${dir.source}/${dir.js}" executable="java" parallel="false" failonerror="true">
             <fileset dir="${dir.source}" includes="${dir.js}/**/*.js" excludes="**/*.min.js,${dir.js.libs}/**"/>
             <arg value="-jar" />
@@ -51,7 +50,6 @@
             <arg value="${tool.jshint.opts}" />
         </apply>
         <echo>JSHint Successful</echo>
-        -->
     </target>
 
     <target name="gjslint">
