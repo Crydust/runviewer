@@ -6,8 +6,8 @@
 // except for 'app' ones, which are in a sibling
 // directory.
 require.config({
-    baseUrl: 'js/lib',
-    paths: {
+    'baseUrl': 'js/lib',
+    'paths': {
         'app': '../app'
     }
 });
