@@ -16,7 +16,7 @@ define(['lodash'], function(_) {
         var coefficients = [-0.0952381, 0.14285714, 0.28571429, 0.33333333,
                 0.28571429, 0.14285714, -0.0952381];
         //walking average used to be
-        //coefficients = [1/18, 2/18, 3/18, 6/18, 3/18, 2/18, 1/18]
+        //coefficients = [1/18, 2/18, 3/18, 6/18, 3/18, 2/18, 1/18];
         var half_window = Math.floor(window_size / 2);
         var padleft = numbers_arr.slice(1, half_window + 1).reverse();
         var padRight = numbers_arr.slice(numbers_arr.length - half_window - 1,
@@ -49,7 +49,8 @@ define(['lodash'], function(_) {
                 return memo + Math.pow(xi - mean, 2);
             }, 0) / (n - 1));
         // t distribution 95% sure upper bound
-        var upper = mean + 1.960 * s;
+        var upper = mean + 1.960 * s / Math.sqrt(n - 1);
+        //upper = mean + 3 * s / Math.sqrt(n - 1);
         //console.log('mean', (mean * 3.6).toFixed(2));
         //console.log('upper', (upper * 3.6).toFixed(2));
         return _.map(numbers_arr, function(n) {

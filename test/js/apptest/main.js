@@ -1,4 +1,4 @@
 
-define(['./utiltest'], function(utiltest) {
+define(['./utiltest', './MatrixFunctionsTest'], function(utiltest) {
     return {};
 });

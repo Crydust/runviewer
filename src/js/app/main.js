@@ -6,8 +6,10 @@ ActiveXObject: false, DOMParser: false */
 
 // IE 6: map doesn't show, works in IE 7
 
-define(['./Promise', './MathHelper', './Track', 'lodash', 'gm', 'domReady!'],
-       function(Promise, MathHelper, Track, _, gmaps, document) {
+define(['./Drawing', './Converter', './Promise', './MathHelper', './Track', './MapView', 'lodash',
+        'domReady!'],
+    function(Drawing, Converter, Promise, MathHelper, Track, MapView, _,
+        document) {
 
     'use strict';
 
@@ -56,86 +58,11 @@ define(['./Promise', './MathHelper', './Track', 'lodash', 'gm', 'domReady!'],
         return promise;
     }
 
-    function msToKmh(ms) {
-        return ms * 3.6;
-    }
-
-    function padLeft(s, length, chr) {
-        var result = String(s);
-        while (result.length < length) {
-            result = chr + result;
-        }
-        return String(result);
-    }
-
-    function secondsToLegible(s) {
-        var hours = Math.floor(s / 3600);
-        var minutes = Math.floor((s - hours * 3600) / 60);
-        var seconds = Math.floor((s - hours * 3600 - minutes * 60));
-        var result = '%dm %ds';
-        if (hours > 0) {
-            result = '%dh %dm %ds';
-            result = result.replace('%d', padLeft(hours, 2, '0'));
-        }
-        return result
-            .replace('%d', padLeft(minutes, 2, '0'))
-            .replace('%d', padLeft(seconds, 2, '0'));
-    }
-
-    function epochToDateString(epoch_s) {
-        var date = new Date();
-        date.setTime(epoch_s * 1000);
-        return '%d/%d/%d'
-            .replace('%d', padLeft(date.getDate(), 2, '0'))
-            .replace('%d', padLeft(date.getMonth() + 1, 2, '0'))
-            .replace('%d', padLeft(date.getFullYear(), 2, '0'));
-    }
-    function epochToTimeString(epoch_s) {
-        var date = new Date();
-        date.setTime(epoch_s * 1000);
-        return '%d:%d'
-            .replace('%d', padLeft(date.getHours(), 2, '0'))
-            .replace('%d', padLeft(date.getMinutes(), 2, '0'));
-    }
 
     function randomFromInterval(from, to) {
         return Math.floor(Math.random() * (to - from + 1) + from);
     }
 
-    function speedToColor(speed) {
-        var kmh = msToKmh(speed);
-        var colors = ['#BB2222',
-        //'#BB3522', '#BB4822', '#BB5B22',
-        '#BB6E22',
-        //'#BB8222', '#BB9522', '#BBA822',
-        '#BBBB22',
-        //'#A8BB22', '#95BB22', '#82BB22',
-        '#6EBB22',
-        //'#5BBB22', '#48BB22', '#35BB22',
-        '#22BB22'];
-        var minspeed = 5;
-        var maxspeed = 12;
-        var index = Math.round((colors.length - 1) *
-                Math.min(1.0,
-                Math.max(0.0, (kmh - minspeed) / (maxspeed - minspeed))));
-        return colors[index];
-    }
-
-    function convertTrackPointToLatLng(point) {
-        return new gmaps.LatLng(point.getLat(), point.getLng());
-    }
-    function convertTrackToLatLngArray(track) {
-        return _.map(track.getPoints(), function(point) {
-            return convertTrackPointToLatLng(point);
-        });
-    }
-    function convertTrackToLatLngBounds(track) {
-        var latlngbounds = new gmaps.LatLngBounds();
-        _.each(track.getPoints(), function(point) {
-                latlngbounds.extend(convertTrackPointToLatLng(point));
-            });
-        return latlngbounds;
-    }
 
     function initialize() {
         var urls = [
@@ -150,7 +77,8 @@ define(['./Promise', './MathHelper', './Track', 'lodash', 'gm', 'domReady!'],
                 //'RK_gpx _2012-07-29_2030.gpx',
                 //'RK_gpx _2012-08-05_2023.gpx',
                 //'RK_gpx _2012-08-07_1847.gpx',
-                'RK_gpx _2012-08-09_2201.gpx' // start is bumpy
+                //'RK_gpx _2012-08-09_2201.gpx', // start is bumpy
+                'RK_gpx _2012-08-12_1130.gpx' // start is extremely bumpy
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
@@ -159,150 +87,58 @@ define(['./Promise', './MathHelper', './Track', 'lodash', 'gm', 'domReady!'],
 
             var track = Track.loadFromXml(xml);
             track = track.toTrackWithoutOutliers();
-            track = track.toTrackWithSgFilter();
-
-            var center = convertTrackPointToLatLng(track.getCenter());
-            var colors = _.map(track.getSpeeds(), speedToColor);
-            var coordinates = convertTrackToLatLngArray(track);
-            var distances = track.getDistances();
-            var times = track.getTimes();
-            var latLngBounds = convertTrackToLatLngBounds(track);
+            //track = track.toTrackWithSgFilter();
 
             _.each({
-                'date': epochToDateString(track.getDate()),
-                'starttime': epochToTimeString(track.getStartTime()),
-                'endtime': epochToTimeString(track.getEndTime()),
+                'date': Converter.epochToDateString(track.getDate()),
+                'starttime': Converter.epochToTimeString(track.getStartTime()),
+                'endtime': Converter.epochToTimeString(track.getEndTime()),
                 'distance': (track.getTotalDistance() / 1000).toFixed(2) +
                         ' km',
-                'duration': secondsToLegible(track.getTotalTime()),
-                'avgpace': secondsToLegible(track.getAveragePace()) + ' /km',
-                'avgspeed': msToKmh(track.getAverageSpeed()).toFixed(2) +
+                'duration': Converter.secondsToLegible(track.getTotalTime()),
+                'avgpace': Converter.secondsToLegible(track.getAveragePace()) + ' /km',
+                'avgspeed': Converter.convertMsToKmh(track.getAverageSpeed()).toFixed(2) +
                         ' km/h'
             }, function(value, key, list) {
                 document.getElementById(key).innerHTML = value;
             });
 
-            // http://gmaps-samples-v3.googlecode.com/svn/trunk/styledmaps/wizard/index.html
-            var map = new gmaps.Map(document.getElementById('map_canvas'), {
-                    zoom: 13,
-                    center: center,
-                    mapTypeId: gmaps.MapTypeId.ROADMAP,
-                    //disableDefaultUI: true,
-                    styles: [{
-                        featureType: 'poi',
-                        stylers: [{ visibility: 'off' }]
-                    }, {
-                        featureType: 'administrative',
-                        stylers: [{ visibility: 'off' }]
-                    }, {
-                        featureType: 'landscape',
-                        stylers: [{ visibility: 'off' }]
-                    }, {
-                        featureType: 'transit',
-                        stylers: [{ visibility: 'off' }]
-                    }]
-                });
+            var mapView = new MapView('map_canvas', track);
 
-            map.fitBounds(latLngBounds);
-
-            var rectangle = new gmaps.Rectangle();
-
-            function drawTrack() {
-                var currentColor = colors[1];
-                var previousPoint = coordinates[0];
-
-                var currentColorPoints = [];
-                var i, len, currentPoint;
-                currentColorPoints.push(previousPoint);
-
-                rectangle.setOptions({
-                    strokeColor: '#000000',
-                    strokeOpacity: 0,
-                    strokeWeight: 0,
-                    fillColor: '#000000',
-                    fillOpacity: 0.7,
-                    map: map,
-                    bounds: map.getBounds()
-                });
-
-                for (i = 1, len = colors.length; i < len; i += 1) {
-                    currentPoint = coordinates[i];
-                    currentColorPoints.push(currentPoint);
-                    if (colors[i] !== currentColor || i === len - 1) {
-                        var polyline = new gmaps.Polyline({
-                            path: currentColorPoints,
-                            strokeColor: currentColor,
-                            strokeOpacity: 1,
-                            strokeWeight: 5,
-                            map: map
-                        });
-
-                        currentColor = colors[i];
-                        currentColorPoints = [];
-                        currentColorPoints.push(currentPoint);
-                    }
-                }
+			var chartDiv = document.getElementById('speed_chart');
+			var width = chartDiv.offsetWidth;
+			var height = chartDiv.offsetHeight;
+			
+            var points = track.getPoints();
+            var speeds = track.getSpeeds();
+            var coords_arr = [];
+            var firstTime = points[0].getTime();
+            var lastTime = _.last(points).getTime();
+            for (var i = 0, leni = speeds.length; i < leni; i += 1) {
+                var point = points[i];
+                coords_arr.push((points[i].getTime() - firstTime) * width / (lastTime-firstTime), height - (speeds[i] * (height/5)));
             }
-
-            function drawMarkers() {
-                var km = 0;
-                var startIcon = new gmaps.Marker({
-                    position: coordinates[0],
-                    map: map,
-                    icon: {url: 'http://chart.googleapis.com/chart?' +
-                            'chst=d_map_pin_letter&chld=A|69C24C|000000'}
-                });
-                var endIcon = new gmaps.Marker({
-                    position: _.last(coordinates),
-                    map: map,
-                    icon: {url: 'http://chart.googleapis.com/chart?' +
-                            'chst=d_map_pin_letter&chld=B|69C24C|000000'}
-                });
-                var endInfoWindow = new gmaps.InfoWindow({
-                    content: 'Distance: ' +
-                            (_.last(distances) / 1000).toFixed(2) +
-                            ' km<br />Time: ' +
-                            secondsToLegible(_.last(times))
-                });
-                gmaps.event.addListener(endIcon, 'click', function() {
-                    endInfoWindow.open(map, this);
-                });
-                _.each(distances, function(element, index, list) {
-                    var currentKm = Math.floor(element / 1000);
-                    if (currentKm > km) {
-                        km = currentKm;
-                        var time = times[index];
-
-                        // icon: {url: 'http://chart.googleapis.com/chart' +
-                        // '?chst=d_map_pin_letter&chld=' + km  +
-                        // '|CCCCCC|000000'}
-                        var kmIcon = new gmaps.Marker({
-                            position: coordinates[index],
-                            map: map,
-                            icon: {
-                                path: gmaps.SymbolPath.CIRCLE,
-                                scale: 3
-                            }
-                        });
-                        var kmInfoWindow = new gmaps.InfoWindow({
-                            content: 'Distance: ' + km + ' km<br />Time: ' +
-                                    secondsToLegible(time)
-                        });
-                        gmaps.event.addListener(kmIcon, 'click', function() {
-                            kmInfoWindow.open(map, this);
-                        });
-                    }
-                });
-            }
-
-            function updateRectangleBounds() {
-                rectangle.setBounds(map.getBounds());
-            }
-
-            gmaps.event.addListenerOnce(map, 'idle', drawTrack);
-            gmaps.event.addListenerOnce(map, 'idle', drawMarkers);
-            gmaps.event.addListener(map, 'bounds_changed',
-                    _.debounce(updateRectangleBounds, 50));
+            coords_arr.push(width, height, 0, height);
+            
+            var drawing = new Drawing();
+            drawing.createGraphics(width, height);
+            
+            drawing.drawShape('poly', [0, 10.5, width, 10.5], 
+                1, '#CCCCCC', 1.0, 
+                '#0000FF', 0.0);
+            drawing.drawShape('poly', [0, 20.5, width, 20.5], 
+                1, '#CCCCCC', 1.0, 
+                '#0000FF', 0.0);
+            drawing.drawShape('poly', [0, 30.5, width, 30.5], 
+                1, '#CCCCCC', 1.0, 
+                '#0000FF', 0.0);
+            drawing.drawShape('poly', [0, 40.5, width, 40.5], 
+                1, '#CCCCCC', 1.0, 
+                '#0000FF', 0.0);
+            drawing.drawShape('poly', coords_arr, 
+                1, '#0000FF', 1.0, 
+                '#0000FF', 0.5);
+            drawing.renderGraphics(chartDiv);
         });
 
     }
