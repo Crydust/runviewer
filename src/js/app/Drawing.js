@@ -26,21 +26,33 @@ define([], function() {
     CanvasDrawing.prototype.createGraphics = function(width, height) {
         this.canvas_ = document.createElement('canvas');
 
+        var devicePixelRatio = 1;
+
+        if (window.devicePixelRatio) {
+            devicePixelRatio = window.devicePixelRatio;
+        }
+
         if (EXCANVAS_COMPATIBLE) {
             // if it is IE lt 9
             var G_vmlCanvasManager = window.G_vmlCanvasManager;
             if (typeof G_vmlCanvasManager !== 'undefined') {
                 document.body.appendChild(this.canvas_);
-                this.canvas_.setAttribute('width', width);
-                this.canvas_.setAttribute('height', height);
+                this.canvas_.setAttribute('width', width * devicePixelRatio);
+                this.canvas_.setAttribute('height', height * devicePixelRatio);
                 // reassign to the new element created by initElement
                 this.canvas_ = G_vmlCanvasManager.initElement(this.canvas_);
             }
         }
 
-        this.canvas_.width = width;
-        this.canvas_.height = height;
+        this.canvas_.width = width * devicePixelRatio;
+        this.canvas_.height = height * devicePixelRatio;
         this.ctx_ = this.canvas_.getContext('2d');
+
+        if (devicePixelRatio !== 1) {
+            this.canvas_.style.width = width + 'px';
+            this.canvas_.style.height = height + 'px';
+            this.ctx_.scale(devicePixelRatio, devicePixelRatio);
+        }
     };
 
     /**
