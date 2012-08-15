@@ -2,9 +2,13 @@
 white: false */
 /*jshint nomen: false, white: false */
 /*global define: false */
-define(['./MathHelper', 'lodash'], function(MathHelper, _) {
+define(['./MathHelper', './MatrixFunctions', 'lodash'],
+        function(MathHelper, MatrixFunctions, _) {
 
     'use strict';
+
+    var Pair = MatrixFunctions.Pair;
+    var polyregress = MatrixFunctions.polyregress;
 
     /**
      * Returns the distance between two points in m
@@ -202,6 +206,54 @@ define(['./MathHelper', 'lodash'], function(MathHelper, _) {
             result.addPoint(new TrackPoint(
                     lats[index], lngs[index], times[index]));
         });
+        return result;
+    };
+
+    function trackpointMirror(item, pivot) {
+        return new TrackPoint(
+                (pivot.getLat() * 2) - item.getLat(),
+                (pivot.getLng() * 2) - item.getLng(),
+                (pivot.getTime() * 2) - item.getTime());
+    }
+
+    function trackPointsToLatPairs(time, currentPoints) {
+        return _.map(currentPoints, function(point) {
+                return new Pair(point.getTime() - time, point.getLat());
+                });
+    }
+
+    function trackPointsToLngPairs(time, currentPoints) {
+        return _.map(currentPoints, function(point) {
+                return new Pair(point.getTime() - time, point.getLng());
+                });
+    }
+
+    Track.prototype.toTrackWithPolyregressionFilter = function() {
+        var i;
+        var result = new Track();
+        var window_size = 15;
+        var order = 4;
+        var half_window = Math.floor(window_size / 2);
+        var padded_arr = MathHelper.padArray(
+                this._points, window_size, trackpointMirror);
+
+        for (i = half_window; i < padded_arr.length - half_window; i += 1) {
+            var time = padded_arr[i].getTime();
+            var currentPoints = padded_arr.slice(
+                i - half_window, i + half_window + 1);
+            var currentLats = trackPointsToLatPairs(time, currentPoints);
+            var currentLngs = trackPointsToLngPairs(time, currentPoints);
+            var coeficientsLat = polyregress(currentLats, order);
+            var coeficientsLng = polyregress(currentLngs, order);
+            //var lat = coeficientsLat[0] + coeficientsLat[1] * time
+            //    + coeficientsLat[2] * time * time;
+            //var lng = coeficientsLng[0] + coeficientsLng[1] * time
+            //    + coeficientsLng[2] * time * time;
+            var lat = coeficientsLat[0];
+            var lng = coeficientsLng[0];
+            //console.log(currentLats, lat);
+            result.addPoint(new TrackPoint(lat, lng, time));
+        }
         return result;
     };
 

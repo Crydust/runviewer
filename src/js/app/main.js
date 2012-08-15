@@ -6,10 +6,10 @@ ActiveXObject: false, DOMParser: false */
 
 // IE 6: map doesn't show, works in IE 7
 
-define(['./Drawing', './Converter', './Promise', './MathHelper', './Track', './MapView', 'lodash',
-        'domReady!'],
-    function(Drawing, Converter, Promise, MathHelper, Track, MapView, _,
-        document) {
+define(['require', './Drawing', './MapView', './Converter', './Promise',
+        './MathHelper', './Track', 'lodash', 'domReady!'],
+    function(require, Drawing, MapView, Converter, Promise,
+        MathHelper, Track, _, document) {
 
     'use strict';
 
@@ -36,24 +36,28 @@ define(['./Drawing', './Converter', './Promise', './MathHelper', './Track', './M
         return promise;
     }
 
+    function parseXml(responseText) {
+        // xml is invalid sometimes
+        if (responseText.indexOf('</trkseg>') === -1) {
+            responseText = responseText.replace(
+                    '</trk>', '</trkseg></trk>');
+        }
+        var xml;
+        if (DOMParser) {
+            xml = (new DOMParser()).parseFromString(
+                    responseText, 'text/xml');
+        } else {
+            xml = new ActiveXObject('Microsoft.XMLDOM');
+            xml.async = false;
+            xml.loadXML(responseText);
+        }
+        return xml;
+    }
+
     function loadXml(url) {
         var promise = new Promise();
         fetchTextAsync(url).then(function(responseText) {
-            // xml is invalid sometimes
-            if (responseText.indexOf('</trkseg>') === -1) {
-                responseText = responseText.replace(
-                        '</trk>', '</trkseg></trk>');
-            }
-            var xml;
-            if (DOMParser) {
-                xml = (new DOMParser()).parseFromString(
-                        responseText, 'text/xml');
-            } else {
-                xml = new ActiveXObject('Microsoft.XMLDOM');
-                xml.async = false;
-                xml.loadXML(responseText);
-            }
-            promise.resolve(xml);
+            promise.resolve(parseXml(responseText));
         });
         return promise;
     }
@@ -88,7 +92,9 @@ define(['./Drawing', './Converter', './Promise', './MathHelper', './Track', './M
             var track = Track.loadFromXml(xml);
             track = track.toTrackWithoutOutliers();
             //track = track.toTrackWithSgFilter();
+            track = track.toTrackWithPolyregressionFilter();
 
+            // stats
             _.each({
                 'date': Converter.epochToDateString(track.getDate()),
                 'starttime': Converter.epochToTimeString(track.getStartTime()),
@@ -96,49 +102,57 @@ define(['./Drawing', './Converter', './Promise', './MathHelper', './Track', './M
                 'distance': (track.getTotalDistance() / 1000).toFixed(2) +
                         ' km',
                 'duration': Converter.secondsToLegible(track.getTotalTime()),
-                'avgpace': Converter.secondsToLegible(track.getAveragePace()) + ' /km',
-                'avgspeed': Converter.convertMsToKmh(track.getAverageSpeed()).toFixed(2) +
-                        ' km/h'
+                'avgpace': Converter.secondsToLegible(track.getAveragePace()) +
+                        ' /km',
+                'avgspeed': Converter.convertMsToKmh(
+                        track.getAverageSpeed()).toFixed(2) + ' km/h'
             }, function(value, key, list) {
                 document.getElementById(key).innerHTML = value;
             });
 
-            var mapView = new MapView('map_canvas', track);
 
-			var chartDiv = document.getElementById('speed_chart');
-			var width = chartDiv.offsetWidth;
-			var height = chartDiv.offsetHeight;
-			
+            // speed chart
+            var chartDiv = document.getElementById('speed_chart');
+            var width = chartDiv.offsetWidth;
+            var height = chartDiv.offsetHeight;
+
             var points = track.getPoints();
             var speeds = track.getSpeeds();
             var coords_arr = [];
             var firstTime = points[0].getTime();
             var lastTime = _.last(points).getTime();
-            for (var i = 0, leni = speeds.length; i < leni; i += 1) {
+            var i, leni;
+            for (i = 0, leni = speeds.length; i < leni; i += 1) {
                 var point = points[i];
-                coords_arr.push((points[i].getTime() - firstTime) * width / (lastTime-firstTime), height - (speeds[i] * (height/5)));
+                coords_arr.push(
+                        (points[i].getTime() - firstTime) *
+                            width / (lastTime - firstTime),
+                        height - (speeds[i] * (height / 5)));
             }
             coords_arr.push(width, height, 0, height);
-            
+
             var drawing = new Drawing();
             drawing.createGraphics(width, height);
-            
-            drawing.drawShape('poly', [0, 10.5, width, 10.5], 
-                1, '#CCCCCC', 1.0, 
+
+            drawing.drawShape('poly', [0, 10.5, width, 10.5],
+                1, '#CCCCCC', 1.0,
                 '#0000FF', 0.0);
-            drawing.drawShape('poly', [0, 20.5, width, 20.5], 
-                1, '#CCCCCC', 1.0, 
+            drawing.drawShape('poly', [0, 20.5, width, 20.5],
+                1, '#CCCCCC', 1.0,
                 '#0000FF', 0.0);
-            drawing.drawShape('poly', [0, 30.5, width, 30.5], 
-                1, '#CCCCCC', 1.0, 
+            drawing.drawShape('poly', [0, 30.5, width, 30.5],
+                1, '#CCCCCC', 1.0,
                 '#0000FF', 0.0);
-            drawing.drawShape('poly', [0, 40.5, width, 40.5], 
-                1, '#CCCCCC', 1.0, 
+            drawing.drawShape('poly', [0, 40.5, width, 40.5],
+                1, '#CCCCCC', 1.0,
                 '#0000FF', 0.0);
-            drawing.drawShape('poly', coords_arr, 
-                1, '#0000FF', 1.0, 
+            drawing.drawShape('poly', coords_arr,
+                1, '#0000FF', 1.0,
                 '#0000FF', 0.5);
             drawing.renderGraphics(chartDiv);
+
+            // maps
+            var mapView = new MapView('map_canvas', track);
         });
 
     }

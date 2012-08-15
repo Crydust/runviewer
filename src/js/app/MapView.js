@@ -22,17 +22,17 @@ define(['./Converter', 'lodash', 'gm'], function(Converter, _, gmaps) {
         return latlngbounds;
     }
 
-    function MapView(id, track){
-    
+    function MapView(id, track) {
+
         var center = convertTrackPointToLatLng(track.getCenter());
         var colors = _.map(track.getSpeeds(), Converter.convertSpeedToColor);
         var coordinates = convertTrackToLatLngArray(track);
         var distances = track.getDistances();
         var times = track.getTimes();
         var latLngBounds = convertTrackToLatLngBounds(track);
-    
+
         var rectangle = new gmaps.Rectangle();
-        
+
         // http://gmaps-samples-v3.googlecode.com/svn/trunk/styledmaps/wizard/index.html
         this.map = new gmaps.Map(document.getElementById(id), {
                 zoom: 13,
@@ -56,17 +56,20 @@ define(['./Converter', 'lodash', 'gm'], function(Converter, _, gmaps) {
 
         this.map.fitBounds(latLngBounds);
 
-        gmaps.event.addListenerOnce(this.map, 'idle', 
+        gmaps.event.addListenerOnce(this.map, 'idle',
             _.bind(this.drawTrack, this, rectangle, colors, coordinates));
-        gmaps.event.addListenerOnce(this.map, 'idle', 
+        gmaps.event.addListenerOnce(this.map, 'idle',
             _.bind(this.drawMarkers, this, coordinates, distances, times));
         gmaps.event.addListener(this.map, 'bounds_changed',
             _.debounce(
-                _.bind(this.updateRectangleBounds, this, rectangle), 
+                _.bind(this.updateRectangleBounds, this, rectangle),
             50));
     }
 
     MapView.prototype.drawTrack = function(rectangle, colors, coordinates) {
+        colors = colors.concat().reverse();
+        coordinates = coordinates.concat().reverse();
+
         var currentColor = colors[1];
         var previousPoint = coordinates[0];
 
@@ -158,7 +161,7 @@ define(['./Converter', 'lodash', 'gm'], function(Converter, _, gmaps) {
     MapView.prototype.updateRectangleBounds = function(rectangle) {
         rectangle.setBounds(this.map.getBounds());
     };
-    
-    
+
+
     return MapView;
 });

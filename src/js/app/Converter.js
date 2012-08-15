@@ -62,7 +62,7 @@ define(['lodash'], function(_) {
                 Math.max(0.0, (kmh - minspeed) / (maxspeed - minspeed))));
         return colors[index];
     }
-    
+
     return {
         secondsToLegible: secondsToLegible,
         convertMsToKmh: convertMsToKmh,

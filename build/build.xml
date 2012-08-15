@@ -176,6 +176,16 @@
                 <file name="${file.root.script}" />
             </sources>
         </jscomp>
+        <jscomp 
+            compilationLevel="${scripts.compilation.level}"
+            warning="${scripts.compilation.warninglevel}"
+            debug="false"
+            forceRecompile="true"
+            output="${dir.publish}/${dir.js.libs}/require.js">
+            <sources dir="${dir.source}/${dir.js.libs}">
+                <file name="require.js" />
+            </sources>
+        </jscomp>
     </target>
     
     <target name="minifyJSWithSourcemap" if="scripts.create_source_map">

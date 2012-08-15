@@ -24,18 +24,18 @@ define([], function() {
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-    function Pair(x, y){
+    function Pair(x, y) {
         this.x = x;
         this.y = y;
     }
-    
-    Pair.prototype.toString = function (){
-        return this.x + "," + this.y;
+
+    Pair.prototype.toString = function() {
+        return this.x + ',' + this.y;
     };
-    
+
     function gj_divide(a, i, j, m) {
         var q;
-        for (q = j + 1; q < m; q++) {
+        for (q = j + 1; q < m; q += 1) {
             a[i][q] /= a[i][j];
         }
         a[i][j] = 1;
@@ -43,9 +43,9 @@ define([], function() {
 
     function gj_eliminate(a, i, j, n, m) {
         var k, q;
-        for (k = 0; k < n; k++) {
-            if (k != i && a[k][j] != 0) {
-                for (q = j + 1; q < m; q++) {
+        for (k = 0; k < n; k += 1) {
+            if (k !== i && a[k][j] !== 0) {
+                for (q = j + 1; q < m; q += 1) {
                     a[k][q] -= a[k][j] * a[i][q];
                 }
                 a[k][j] = 0;
@@ -63,44 +63,44 @@ define([], function() {
         while (i < n && j < m) {
             //look for non-zero entries in col j at or below row i
             k = i;
-            while (k < n && a[k][j] == 0) {
-                k++;
+            while (k < n && a[k][j] === 0) {
+                k += 1;
             }
             // if an entry is found at row k
             if (k < n) {
                 //  if k is not i, then swap row i with row k
-                if (k != i) {
+                if (k !== i) {
                     temp = a[i];
                     a[i] = a[k];
                     a[k] = temp;
                 }
-                // if a[i][j] is != 1, divide row i by A[i][j]
-                if (a[i][j] != 1) {
+                // if a[i][j] is !== 1, divide row i by A[i][j]
+                if (a[i][j] !== 1) {
                     gj_divide(a, i, j, m);
                 }
                 // eliminate all other non-zero entries
                 gj_eliminate(a, i, j, n, m);
-                i++;
+                i += 1;
             }
-            j++;
+            j += 1;
         }
     }
-    
-    function create1dArray(columns, value){
+
+    function create1dArray(columns, value) {
         var result = [], c;
-        for(c=0;c<columns;c+=1){
+        for (c = 0; c < columns; c += 1) {
             result.push(value);
         }
         return result;
     }
-    function create2dArray(rows, columns, value){
+    function create2dArray(rows, columns, value) {
         var result = [], r;
-        for(r=0;r<rows;r+=1){
+        for (r = 0; r < rows; r += 1) {
             result.push(create1dArray(columns, value));
         }
         return result;
     }
-    
+
 /*
     public double corr_coeff(Pair[] data, double[] terms) {
         double r = 0;
@@ -117,7 +117,7 @@ define([], function() {
             sy2 += y * y;
         }
         double div = Math.sqrt((sx2 - (sx * sx) / n) * (sy2 - (sy * sy) / n));
-        if (div != 0) {
+        if (div !== 0) {
             r = Math.pow((sxy - (sx * sy) / n) / div, 2);
         }
         return r;
@@ -139,7 +139,7 @@ define([], function() {
     function polyregress(data, p) {
         p += 1;
         var n = data.length,
-        r, c, i, j,
+        r, c, i, j, pr, result,
         rs = 2 * p - 1,
         //
         // by request: read each datum only once
@@ -147,25 +147,25 @@ define([], function() {
         // but required if the data set is huge
         //
         // create square matrix with added RH column
-        m = create2dArray(p, p+1, null),
+        m = create2dArray(p, p + 1, null),
         // create array of precalculated matrix data
         mpc = create1dArray(rs, null);
         mpc[0] = n;
-        for (i=0; i<n; i+=1) {
+        for (i = 0; i < n; i += 1) {
             pr = data[i];
             // process precalculation array
-            for (r = 1; r < rs; r++) {
+            for (r = 1; r < rs; r += 1) {
                 mpc[r] += Math.pow(pr.x, r);
             }
             // process RH column cells
             m[0][p] += pr.y;
-            for (r = 1; r < p; r++) {
+            for (r = 1; r < p; r += 1) {
                 m[r][p] += Math.pow(pr.x, r) * pr.y;
             }
         }
         // populate square matrix section
-        for (r = 0; r < p; r++) {
-            for (c = 0; c < p; c++) {
+        for (r = 0; r < p; r += 1) {
+            for (c = 0; c < p; c += 1) {
                 m[r][c] = mpc[r + c];
             }
         }
@@ -175,12 +175,12 @@ define([], function() {
         //parent.show_mat(m);
         // extract rh column
         result = create1dArray(p, null);
-        for (j = 0; j < p; j++) {
+        for (j = 0; j < p; j += 1) {
             result[j] = m[j][p];
         }
         return result;
     }
-    
+
     return {
         'Pair': Pair,
         'polyregress': polyregress
