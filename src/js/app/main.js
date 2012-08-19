@@ -6,10 +6,12 @@ ActiveXObject: false, DOMParser: false */
 
 // IE 6: map doesn't show, works in IE 7
 
-define(['require', './Drawing', './MapView', './Converter', './Promise',
-        './MathHelper', './Track', 'lodash', 'domReady!'],
-    function(require, Drawing, MapView, Converter, Promise,
-        MathHelper, Track, _, document) {
+define(['./SpeedOverTimeView', './SpeedOverDistanceView', './MapView',
+        './Converter', './Promise', './MathHelper', './Track',
+        'lodash', 'domReady!'],
+    function(SpeedOverTimeView, SpeedOverDistanceView, MapView,
+            Converter, Promise, MathHelper, Track,
+            _, document) {
 
     'use strict';
 
@@ -82,7 +84,9 @@ define(['require', './Drawing', './MapView', './Converter', './Promise',
                 //'RK_gpx _2012-08-05_2023.gpx',
                 //'RK_gpx _2012-08-07_1847.gpx',
                 //'RK_gpx _2012-08-09_2201.gpx', // start is bumpy
-                'RK_gpx _2012-08-12_1130.gpx' // start is extremely bumpy
+                //'RK_gpx _2012-08-12_1130.gpx', // start is extremely bumpy
+                //'RK_gpx _2012-08-15_2206.gpx',
+                'RK_gpx _2012-08-19_2210.gpx' //outliers at the start
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
@@ -112,44 +116,8 @@ define(['require', './Drawing', './MapView', './Converter', './Promise',
 
 
             // speed chart
-            var chartDiv = document.getElementById('speed_chart');
-            var width = chartDiv.offsetWidth;
-            var height = chartDiv.offsetHeight;
-
-            var points = track.getPoints();
-            var speeds = track.getSpeeds();
-            var coords_arr = [];
-            var firstTime = points[0].getTime();
-            var lastTime = _.last(points).getTime();
-            var i, leni;
-            for (i = 0, leni = speeds.length; i < leni; i += 1) {
-                var point = points[i];
-                coords_arr.push(
-                        (points[i].getTime() - firstTime) *
-                            width / (lastTime - firstTime),
-                        height - (speeds[i] * (height / 5)));
-            }
-            coords_arr.push(width, height, 0, height);
-
-            var drawing = new Drawing();
-            drawing.createGraphics(width, height);
-
-            drawing.drawShape('poly', [0, 10.5, width, 10.5],
-                1, '#CCCCCC', 1.0,
-                '#0000FF', 0.0);
-            drawing.drawShape('poly', [0, 20.5, width, 20.5],
-                1, '#CCCCCC', 1.0,
-                '#0000FF', 0.0);
-            drawing.drawShape('poly', [0, 30.5, width, 30.5],
-                1, '#CCCCCC', 1.0,
-                '#0000FF', 0.0);
-            drawing.drawShape('poly', [0, 40.5, width, 40.5],
-                1, '#CCCCCC', 1.0,
-                '#0000FF', 0.0);
-            drawing.drawShape('poly', coords_arr,
-                1, '#0000FF', 1.0,
-                '#0000FF', 0.5);
-            drawing.renderGraphics(chartDiv);
+            //var chart = new SpeedOverTimeView('speed_chart', track);
+            var chart = new SpeedOverDistanceView('speed_chart', track);
 
             // maps
             var mapView = new MapView('map_canvas', track);
