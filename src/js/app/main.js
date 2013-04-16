@@ -6,16 +6,14 @@ ActiveXObject: false, DOMParser: false */
 
 // IE 6: map doesn't show, works in IE 7
 
-define(['./SpeedOverTimeView', './SpeedOverDistanceView', './MapView',
+define(['./SpeedOverDistanceView', './MapView',
         './Converter', './Promise', './MathHelper', './Track',
         'lodash', 'domReady!'],
-    function(SpeedOverTimeView, SpeedOverDistanceView, MapView,
+    function(SpeedOverDistanceView, MapView,
             Converter, Promise, MathHelper, Track,
             _, document) {
 
     'use strict';
-
-    var NOOP = function() {};
 
     function fetchTextAsync(url) {
         var promise = new Promise();
@@ -39,11 +37,6 @@ define(['./SpeedOverTimeView', './SpeedOverDistanceView', './MapView',
     }
 
     function parseXml(responseText) {
-        // xml is invalid sometimes
-        if (responseText.indexOf('</trkseg>') === -1) {
-            responseText = responseText.replace(
-                    '</trk>', '</trkseg></trk>');
-        }
         var xml;
         if (DOMParser) {
             xml = (new DOMParser()).parseFromString(
@@ -56,19 +49,26 @@ define(['./SpeedOverTimeView', './SpeedOverDistanceView', './MapView',
         return xml;
     }
 
+    function fixXml(responseText) {
+        // xml is invalid sometimes
+        if (responseText.indexOf('</trkseg>') === -1) {
+            return responseText.replace(
+                    '</trk>', '</trkseg></trk>');
+        }
+        return responseText;
+    }
+
     function loadXml(url) {
         var promise = new Promise();
         fetchTextAsync(url).then(function(responseText) {
-            promise.resolve(parseXml(responseText));
+            promise.resolve(parseXml(fixXml(responseText)));
         });
         return promise;
     }
 
-
     function randomFromInterval(from, to) {
         return Math.floor(Math.random() * (to - from + 1) + from);
     }
-
 
     function initialize() {
         var urls = [
@@ -84,9 +84,14 @@ define(['./SpeedOverTimeView', './SpeedOverDistanceView', './MapView',
                 //'RK_gpx _2012-08-05_2023.gpx',
                 //'RK_gpx _2012-08-07_1847.gpx',
                 //'RK_gpx _2012-08-09_2201.gpx', // start is bumpy
-                //'RK_gpx _2012-08-12_1130.gpx', // start is extremely bumpy
+                'RK_gpx _2012-08-12_1130.gpx'//, // start is extremely bumpy
                 //'RK_gpx _2012-08-15_2206.gpx',
-                'RK_gpx _2012-08-19_2210.gpx' //outliers at the start
+                //'RK_gpx _2012-08-19_2210.gpx', //outliers at the start
+                //'RK_gpx _2012-08-21_2213.gpx',
+                //'RK_gpx _2012-09-02_1333.gpx', //outliers at the start
+                //'RK_gpx _2012-09-14_2207.gpx',
+                //'RK_gpx _2012-09-12_2203.gpx',
+                //'RK_gpx _2012-09-16_2143.gpx'
             ];
 
         var url = urls[randomFromInterval(0, urls.length - 1)];
@@ -94,9 +99,10 @@ define(['./SpeedOverTimeView', './SpeedOverDistanceView', './MapView',
         loadXml(url).then(function(xml) {
 
             var track = Track.loadFromXml(xml);
-            track = track.toTrackWithoutOutliers();
+            //track = track.toTrackWithoutOutliers();
             //track = track.toTrackWithSgFilter();
-            track = track.toTrackWithPolyregressionFilter();
+            //track = track.toTrackWithPolyregressionFilter();
+            //track = track.toSmoothTrack();
 
             // stats
             _.each({
@@ -116,7 +122,6 @@ define(['./SpeedOverTimeView', './SpeedOverDistanceView', './MapView',
 
 
             // speed chart
-            //var chart = new SpeedOverTimeView('speed_chart', track);
             var chart = new SpeedOverDistanceView('speed_chart', track);
 
             // maps

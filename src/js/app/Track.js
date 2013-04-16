@@ -257,5 +257,47 @@ define(['./MathHelper', './MatrixFunctions', 'lodash'],
         return result;
     };
 
+    // Smooth some data with a given window size.
+    // http://en.wikipedia.org/wiki/Gaussian_function
+    function smooth(d, w) {
+        var result = [];
+        for (var i = 0, l = d.length; i < l; ++i) {
+            var mn = Math.max(0, i - 5 * w),
+                mx = Math.min(d.length - 1, i + 5 * w),
+                s = 0.0;
+            result[i] = 0.0;
+            for (var j = mn; j < mx; ++j) {
+                //gauss factors (same, and symetrical)
+                var wd = Math.exp(-0.5 * (i - j) * (i - j) / w / w);
+                result[i] += wd * d[j];
+                s += wd;
+            }
+            result[i] /= s;
+        }
+        return result;
+    }
+    
+    Track.prototype.toSmoothTrack = function() {
+        var i;
+        var result = new Track();
+        var window_size = 2;
+        var half_window = Math.floor(window_size / 2);
+        var padded_arr = MathHelper.padArray(
+                this._points, window_size, trackpointMirror);
+        
+        var lats = _.map(padded_arr, function(el) { return el.getLat(); });
+        var lngs = _.map(padded_arr, function(el) { return el.getLng(); });
+        //var smoothLats = smooth(lats, window_size);
+        //var smoothLngs = smooth(lngs, window_size);
+        var smoothLats = smoothFast(lats, window_size);
+        var smoothLngs = smoothFast(lngs, window_size);
+        //console.log(lats);
+        //console.log(smoothLats);
+        for (i = half_window; i < padded_arr.length - half_window; i += 1) {
+            result.addPoint(new TrackPoint(smoothLats[i], smoothLngs[i], padded_arr[i].getTime()));
+        }
+        return result;
+    };
+
     return Track;
 });
