@@ -1,11 +1,10 @@
-syntax: glob
-
 *.gpx
 _*
-.*
 ftp.properties
 node_modules/
 tools/
+
+/build/config/project.properties
 
 # hg
 *.orig
@@ -31,7 +30,7 @@ tools/
 # svn
 .svn/
 _svn/
-svnignore[.-]*
+svnignore*
 
 # cvs
 CVS/
@@ -45,21 +44,18 @@ CVS/
 # dreamweaver
 _notes/
 
-my_build/config/project.properties
-syntax: regexp
-
 # eclipse
-^\.refactorings/
-^\.settings/
-^\.classpath$
-^\.project$
+/.refactorings/
+/.settings/
+/.classpath/
+/.project/
 
 # intellij
-^\.idea/
+/.idea/
 
 # html5boilerplate
-^build/config/css\.build\.js
-^build/config/js\.build\.js
-^build/config/project\.properties
-^intermediate/
-^publish/
+/build/config/css.build.js
+/build/config/js.build.js
+/build/config/project.properties
+/intermediate/
+/publish/
